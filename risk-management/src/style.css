@@ -1,0 +1,69 @@
+/* ===== MATRIX ===== */
+
+.matrix {
+  display: inline-block;
+  margin-top: 20px;
+}
+
+.matrix-row {
+  display: flex;
+}
+
+.matrix-cell {
+  width: 80px;
+  height: 80px;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* WARNA */
+.matrix-cell.low {
+  background-color: #28a745;
+  color: white;
+}
+
+.matrix-cell.medium {
+  background-color: #ffc107;
+}
+
+.matrix-cell.high {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* CARD MODERN */
+.card {
+  border: none;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.95);
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: linear-gradient(180deg, #000000, #8B0000);
+}
+
+/* TEXT */
+h2 {
+  font-weight: bold;
+}
+
+/* BUTTON */
+.btn-danger {
+  border-radius: 8px;
+}
+
+/* TABLE */
+.table {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
