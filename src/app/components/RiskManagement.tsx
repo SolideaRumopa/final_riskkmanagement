@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2, Search, Calculator, X, AlertTriangle, AlertCircle, CheckCircle, Copy } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, Search, Calculator, AlertCircle } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -11,948 +11,294 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
-import { toast } from "sonner";
 
-const initialRisks = [
-  {
-    id: "R-001",
-    name: "Ketiadaan Genset Cadangan",
-    asset: "Power System",
-    vulnerability: "No backup power",
-    threat: "Power outage >4 hours",
-    category: "Power",
-    likelihood: 3,
-    impact: 3,
-    score: 9,
-    level: "High",
-    status: "In Progress",
-  },
-  {
-    id: "R-002",
-    name: "Jaringan Internet Buruk",
-    asset: "Network Infrastructure",
-    vulnerability: "Single ISP, weak signal",
-    threat: "Connection loss",
-    category: "Network",
-    likelihood: 3,
-    impact: 2,
-    score: 6,
-    level: "Medium",
-    status: "Mitigated",
-  },
-  {
-    id: "R-003",
-    name: "Single Point of Failure - Server",
-    asset: "Main Server",
-    vulnerability: "No redundancy",
-    threat: "Server crash",
-    category: "Network",
-    likelihood: 3,
-    impact: 3,
-    score: 9,
-    level: "High",
-    status: "Not Started",
-  },
-];
+const STORAGE_KEY = "richeese_risk_management_data";
+const ASSET_KEY = "richeese_assets";
+const VULN_KEY = "richeese_vulnerabilities";
+const THREAT_KEY = "richeese_threat_catalog";
 
 export function RiskManagement() {
-  const [risks, setRisks] = useState(initialRisks);
+  const [risks, setRisks] = useState<any[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<any[]>([]);
+  const [availableVulns, setAvailableVulns] = useState<any[]>([]);
+  const [availableThreats, setAvailableThreats] = useState<any[]>([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingRisk, setEditingRisk] = useState<any>(null);
-  const [likelihood, setLikelihood] = useState(1);
-  const [impact, setImpact] = useState(1);
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [levelFilter, setLevelFilter] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
+    name: "",
     asset: "",
     vulnerability: "",
     threat: "",
     category: "",
-    name: "",
+    likelihood: 1,
+    impact: 1
   });
 
-  const calculateRiskScore = () => likelihood * impact;
+  useEffect(() => {
+    const savedRisks = localStorage.getItem(STORAGE_KEY);
+    if (savedRisks) setRisks(JSON.parse(savedRisks));
+
+    const savedAssets = localStorage.getItem(ASSET_KEY);
+    if (savedAssets) setAvailableAssets(JSON.parse(savedAssets));
+
+    const savedVulns = localStorage.getItem(VULN_KEY);
+    if (savedVulns) setAvailableVulns(JSON.parse(savedVulns));
+
+    const savedThreats = localStorage.getItem(THREAT_KEY);
+    if (savedThreats) setAvailableThreats(JSON.parse(savedThreats));
+  }, [showAddModal]);
+
+  const persistData = (newData: any[]) => {
+    setRisks(newData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+  };
+
+  const calculateRiskScore = (l: number, i: number) => l * i;
   const getRiskLevel = (score: number) => {
     if (score <= 2) return "Low";
     if (score <= 4) return "Medium";
     return "High";
   };
 
-  const filteredRisks = risks.filter((risk) => {
-    const matchesSearch =
-      risk.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      risk.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "" || risk.category === categoryFilter;
-    const matchesLevel = levelFilter === "" || risk.level === levelFilter;
-    return matchesSearch && matchesCategory && matchesLevel;
-  });
+  const handleSave = () => {
+    if (!formData.name || !formData.category) return;
 
-  const handleAddRisk = () => {
-    if (!formData.asset || !formData.vulnerability || !formData.threat || !formData.category) {
-      toast.error("Please fill in all required fields");
-      return;
+    const score = calculateRiskScore(formData.likelihood, formData.impact);
+    const level = getRiskLevel(score);
+
+    let updatedRisks;
+    if (editingId) {
+      updatedRisks = risks.map((r) =>
+        r.id === editingId ? { ...formData, id: r.id, score, level } : r
+      );
+    } else {
+      let nextNumber = 1;
+      if (risks.length > 0) {
+        const lastEntry = risks[risks.length - 1];
+        const lastIdParts = lastEntry.id.split("-");
+        nextNumber = lastIdParts.length > 1 ? parseInt(lastIdParts[1]) + 1 : risks.length + 1;
+      }
+      const newId = `R-${nextNumber.toString().padStart(3, "0")}`;
+      updatedRisks = [...risks, { ...formData, id: newId, score, level }];
     }
 
-    const newRisk = {
-      id: `R-${String(risks.length + 1).padStart(3, "0")}`,
-      name: formData.name || `${formData.asset} - ${formData.vulnerability}`,
-      asset: formData.asset,
-      vulnerability: formData.vulnerability,
-      threat: formData.threat,
-      category: formData.category,
-      likelihood,
-      impact,
-      score: calculateRiskScore(),
-      level: getRiskLevel(calculateRiskScore()),
-      status: "Not Started",
-    };
+    persistData(updatedRisks);
+    handleCloseModal();
+  };
 
-    setRisks([...risks, newRisk]);
-    toast.success("Risk added successfully!");
-    resetForm();
+  const handleDelete = (id: string) => {
+    if (confirm("Apakah Anda yakin ingin menghapus risiko ini?")) {
+      persistData(risks.filter((r) => r.id !== id));
+    }
+  };
+
+  const handleEdit = (risk: any) => {
+    setEditingId(risk.id);
+    setFormData(risk);
+    setShowAddModal(true);
+  };
+
+  const handleCloseModal = () => {
     setShowAddModal(false);
-  };
-
-  const handleEditRisk = (risk: any) => {
-    setEditingRisk(risk);
+    setEditingId(null);
     setFormData({
-      asset: risk.asset,
-      vulnerability: risk.vulnerability,
-      threat: risk.threat,
-      category: risk.category,
-      name: risk.name,
+      name: "", asset: "", vulnerability: "", threat: "",
+      category: "", likelihood: 1, impact: 1
     });
-    setLikelihood(risk.likelihood);
-    setImpact(risk.impact);
-    setShowEditModal(true);
   };
 
-  const handleUpdateRisk = () => {
-    if (!formData.asset || !formData.vulnerability || !formData.threat || !formData.category) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    const updatedRisks = risks.map((risk) =>
-      risk.id === editingRisk.id
-        ? {
-            ...risk,
-            name: formData.name || `${formData.asset} - ${formData.vulnerability}`,
-            asset: formData.asset,
-            vulnerability: formData.vulnerability,
-            threat: formData.threat,
-            category: formData.category,
-            likelihood,
-            impact,
-            score: calculateRiskScore(),
-            level: getRiskLevel(calculateRiskScore()),
-            status: editingRisk.status,
-          }
-        : risk
-    );
-
-    setRisks(updatedRisks);
-    toast.success("Risk updated successfully!");
-    resetForm();
-    setShowEditModal(false);
-    setEditingRisk(null);
-  };
-
-  const handleDeleteRisk = (riskId: string) => {
-    setRisks(risks.filter((risk) => risk.id !== riskId));
-    toast.success("Risk deleted successfully!");
-  };
-
-  const handleDuplicateRisk = (risk: any) => {
-    const newRisk = {
-      ...risk,
-      id: `R-${String(risks.length + 1).padStart(3, "0")}`,
-      name: `${risk.name} (Copy)`,
-      status: "Not Started",
-    };
-    setRisks([...risks, newRisk]);
-    toast.success("Risk duplicated successfully!");
-  };
-
-  const resetForm = () => {
-    setFormData({
-      asset: "",
-      vulnerability: "",
-      threat: "",
-      category: "",
-      name: "",
-    });
-    setLikelihood(1);
-    setImpact(1);
-  };
-
-  const highRisks = risks.filter((r) => r.level === "High").length;
-  const mediumRisks = risks.filter((r) => r.level === "Medium").length;
-  const lowRisks = risks.filter((r) => r.level === "Low").length;
+  const filteredRisks = risks.filter((r) =>
+    r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-1">
         <div>
-          <h1 className="text-3xl font-bold text-primary">
-            Risk Management - Interactive
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Complete end-to-end risk assessment and tracking with real-time notifications
-          </p>
+          <h1 className="text-2xl font-semibold text-gray-900">Risk Management</h1>
+          <p className="text-sm text-gray-500">Assess and monitor organizational risks</p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setShowAddModal(true);
-            toast.info("Fill in the form to add a new risk");
-          }}
-          className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform shadow-md"
-        >
-          <Plus className="w-4 h-4" />
-          Add Risk
+        <Button onClick={() => setShowAddModal(true)} className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white flex items-center gap-2 shadow-sm">
+          <Plus className="w-4 h-4" /> Add Risk
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card
-          className={`p-4 cursor-pointer hover:shadow-lg transition-all hover:scale-105 active:scale-95 ${
-            levelFilter === "High" ? "ring-4 ring-red-300 shadow-lg" : ""
-          }`}
-          onClick={() => {
-            if (levelFilter === "High") {
-              setLevelFilter("");
-              toast.info("Showing all risks");
-            } else {
-              setLevelFilter("High");
-              toast.info("Showing High risk items");
-            }
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">High Risk</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">{highRisks}</p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card
-          className={`p-4 cursor-pointer hover:shadow-lg transition-all hover:scale-105 active:scale-95 ${
-            levelFilter === "Medium" ? "ring-4 ring-yellow-300 shadow-lg" : ""
-          }`}
-          onClick={() => {
-            if (levelFilter === "Medium") {
-              setLevelFilter("");
-              toast.info("Showing all risks");
-            } else {
-              setLevelFilter("Medium");
-              toast.info("Showing Medium risk items");
-            }
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Medium Risk</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">{mediumRisks}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card
-          className={`p-4 cursor-pointer hover:shadow-lg transition-all hover:scale-105 active:scale-95 ${
-            levelFilter === "Low" ? "ring-4 ring-green-300 shadow-lg" : ""
-          }`}
-          onClick={() => {
-            if (levelFilter === "Low") {
-              setLevelFilter("");
-              toast.info("Showing all risks");
-            } else {
-              setLevelFilter("Low");
-              toast.info("Showing Low risk items");
-            }
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Low Risk</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{lowRisks}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
-      <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-              }}
-              placeholder="Search risks by name or category..."
-              className="w-full pl-10 pr-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              toast.info(
-                e.target.value
-                  ? `Filtered by category: ${e.target.value}`
-                  : "Showing all categories"
-              );
-            }}
-            className="px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">All Categories</option>
-            <option value="Power">Power</option>
-            <option value="Network">Network</option>
-            <option value="Human Error">Human Error</option>
-          </select>
-          <select
-            value={levelFilter}
-            onChange={(e) => {
-              setLevelFilter(e.target.value);
-              toast.info(
-                e.target.value
-                  ? `Filtered by level: ${e.target.value}`
-                  : "Showing all risk levels"
-              );
-            }}
-            className="px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">All Risk Levels</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
-          {(searchTerm || categoryFilter || levelFilter) && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm("");
-                setCategoryFilter("");
-                setLevelFilter("");
-                toast.success("All filters cleared");
-              }}
-              className="border-primary text-primary hover:bg-rose-50"
-            >
-              Clear Filters
-            </Button>
-          )}
+      <Card className="p-4 border-none shadow-sm bg-white/50 backdrop-blur-sm">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search risks..."
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a]/10 transition-all"
+          />
         </div>
       </Card>
 
-      {/* Risks Table */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-600">
-            Showing <span className="font-semibold text-gray-900">{filteredRisks.length}</span> of{" "}
-            <span className="font-semibold text-gray-900">{risks.length}</span> risks
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-semibold">Risk ID</TableHead>
-                <TableHead className="font-semibold">Risk Name</TableHead>
-                <TableHead className="font-semibold">Category</TableHead>
-                <TableHead className="font-semibold">L × I</TableHead>
-                <TableHead className="font-semibold">Score</TableHead>
-                <TableHead className="font-semibold">Level</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRisks.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    No risks found. Try adjusting your filters or add a new risk.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredRisks.map((risk) => (
-                <TableRow key={risk.id} className="hover:bg-rose-50">
-                  <TableCell
-                    className="font-medium text-primary cursor-pointer hover:underline"
-                    onClick={() => {
-                      toast.info(
-                        `${risk.id}: ${risk.name} | Asset: ${risk.asset} | Status: ${risk.status}`
-                      );
-                    }}
-                  >
-                    {risk.id}
-                  </TableCell>
-                  <TableCell className="font-medium">{risk.name}</TableCell>
+      <Card className="overflow-hidden border-none shadow-sm bg-white">
+        <Table>
+          <TableHeader className="bg-gray-50/50">
+            <TableRow>
+              <TableHead className="font-bold text-gray-700 w-[80px]">ID</TableHead>
+              <TableHead className="font-bold text-gray-700">Name</TableHead>
+              <TableHead className="font-bold text-gray-700">Category</TableHead>
+              <TableHead className="font-bold text-gray-700 text-center">L x I</TableHead>
+              <TableHead className="font-bold text-gray-700 text-center">Score</TableHead>
+              <TableHead className="font-bold text-gray-700">Level</TableHead>
+              {/* Kolom Status telah dihapus */}
+              <TableHead className="font-bold text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRisks.length > 0 ? (
+              filteredRisks.map((risk) => (
+                <TableRow key={risk.id} className="group hover:bg-gray-50/50 transition-colors">
+                  <TableCell className="font-bold text-[#1e3a8a]">{risk.id}</TableCell>
+                  <TableCell className="font-medium text-gray-900">{risk.name}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="cursor-pointer hover:bg-accent transition-all hover:scale-110"
-                      onClick={() => {
-                        setCategoryFilter(risk.category);
-                        toast.info(`Filtered by category: ${risk.category}`);
-                      }}
-                      title="Click to filter by this category"
-                    >
+                    <Badge variant="outline" className="font-normal text-gray-500 border-gray-200">
                       {risk.category}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">
-                      {risk.likelihood} × {risk.impact}
-                    </span>
+                  <TableCell className="text-center text-gray-400 font-mono text-xs">
+                    {risk.likelihood} × {risk.impact}
+                  </TableCell>
+                  <TableCell className="text-center font-bold text-gray-700">
+                    {risk.score}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      className={`${
-                        risk.level === "High"
-                          ? "bg-red-600 text-white hover:bg-red-700"
-                          : risk.level === "Medium"
-                          ? "bg-yellow-600 text-white hover:bg-yellow-700"
-                          : "bg-green-600 text-white hover:bg-green-700"
-                      }`}
-                    >
-                      {risk.score}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`border-0 cursor-pointer transition-all hover:scale-110 ${
-                        risk.level === "High"
-                          ? "bg-red-100 text-red-800 hover:bg-red-200"
-                          : risk.level === "Medium"
-                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                          : "bg-green-100 text-green-800 hover:bg-green-200"
-                      }`}
-                      onClick={() => {
-                        toast.info(`Risk Level: ${risk.level} (Score: ${risk.score})`);
-                      }}
-                      title="Click to see risk details"
+                    <Badge 
+                      className={`
+                        ${risk.level === "High" ? "bg-red-50 text-red-700 border-red-100" : 
+                          risk.level === "Medium" ? "bg-yellow-50 text-yellow-700 border-yellow-100" : 
+                          "bg-green-50 text-green-700 border-green-100"} 
+                        border font-bold shadow-none
+                      `}
                     >
                       {risk.level}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      className={`border-0 cursor-pointer transition-all ${
-                        risk.status === "Mitigated"
-                          ? "bg-green-100 text-green-800 hover:bg-green-200"
-                          : risk.status === "In Progress"
-                          ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                          : "bg-red-100 text-red-800 hover:bg-red-200"
-                      }`}
-                      onClick={() => {
-                        const newStatus =
-                          risk.status === "Not Started"
-                            ? "In Progress"
-                            : risk.status === "In Progress"
-                            ? "Mitigated"
-                            : "Not Started";
-                        setRisks(
-                          risks.map((r) =>
-                            r.id === risk.id ? { ...r, status: newStatus } : r
-                          )
-                        );
-                        toast.success(`Status changed to: ${newStatus}`);
-                      }}
-                    >
-                      {risk.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:bg-accent hover:scale-110 transition-transform active:scale-95"
-                        onClick={() => {
-                          handleEditRisk(risk);
-                          toast.info("Opening edit form...");
-                        }}
-                        title="Edit risk"
+                    <div className="flex justify-center gap-1">
+                      <Button 
+                        variant="ghost" size="sm" 
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        onClick={() => handleEdit(risk)}
                       >
-                        <Edit className="w-4 h-4 text-primary" />
+                        <Edit className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:bg-accent hover:scale-110 transition-transform active:scale-95"
-                        onClick={() => {
-                          handleDuplicateRisk(risk);
-                        }}
-                        title="Duplicate risk"
+                      <Button 
+                        variant="ghost" size="sm" 
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        onClick={() => handleDelete(risk.id)}
                       >
-                        <Copy className="w-4 h-4 text-primary" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="hover:bg-red-50 hover:scale-110 transition-transform active:scale-95"
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${risk.name}?`)) {
-                            handleDeleteRisk(risk.id);
-                          } else {
-                            toast.info("Delete cancelled");
-                          }
-                        }}
-                        title="Delete risk"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-64 text-center">
+                  <div className="flex flex-col items-center justify-center text-gray-400">
+                    <AlertCircle className="w-12 h-12 mb-3 opacity-10" />
+                    <p className="text-lg font-semibold text-gray-300">No risk assessments found</p>
+                    <p className="text-sm opacity-60">Click "Add Risk" to start your first assessment.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
-      {/* Add Risk Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto animate-in fade-in duration-200">
-          <Card className="w-full max-w-3xl p-6 m-4 relative animate-in zoom-in-95 duration-200">
-            <button
-              onClick={() => {
-                setShowAddModal(false);
-                resetForm();
-                toast.info("Add risk cancelled");
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-primary hover:bg-accent rounded-full p-1 transition-all hover:scale-110 active:scale-95"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Add New Risk Assessment
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl p-6 shadow-2xl border-none">
+            <h3 className="text-xl font-bold mb-6 text-gray-900 border-b pb-4">
+              {editingId ? "Update Risk Assessment" : "Add New Risk"}
             </h3>
-            <div className="space-y-4">
-              {/* Risk Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Risk Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Auto-generated if left empty"
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* Asset Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Asset *
-                </label>
-                <select
-                  value={formData.asset}
-                  onChange={(e) =>
-                    setFormData({ ...formData, asset: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select asset</option>
-                  <option value="Power System">Power System</option>
-                  <option value="Main Server">Main Server</option>
-                  <option value="POS System">POS System</option>
-                  <option value="Network Infrastructure">Network Infrastructure</option>
-                </select>
-              </div>
-
-              {/* Vulnerability Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vulnerability *
-                </label>
-                <select
-                  value={formData.vulnerability}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vulnerability: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select vulnerability</option>
-                  <option value="No backup power">No backup power source</option>
-                  <option value="No redundancy">No server redundancy</option>
-                  <option value="Single ISP">Single ISP connection</option>
-                  <option value="Outdated software">Outdated software</option>
-                </select>
-              </div>
-
-              {/* Threat Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Threat *
-                </label>
-                <select
-                  value={formData.threat}
-                  onChange={(e) =>
-                    setFormData({ ...formData, threat: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select threat</option>
-                  <option value="Power outage >4 hours">Power outage &gt;4 hours</option>
-                  <option value="Server crash">Server crash</option>
-                  <option value="Network failure">Network failure</option>
-                  <option value="Data breach">Data breach</option>
-                </select>
-              </div>
-
-              {/* Risk Calculation Section */}
-              <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator className="w-5 h-5 text-primary" />
-                  <h4 className="font-semibold text-gray-900">Risk Calculation</h4>
+            
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1">Name</label>
+                  <input 
+                    type="text" value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#1e3a8a] transition-all" 
+                    placeholder="e.g. Data Breach"
+                  />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Likelihood (1-3) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="3"
-                      value={likelihood}
-                      onChange={(e) => setLikelihood(Number(e.target.value))}
-                      className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                    <p className="text-xs text-gray-600 mt-1">
-                      1=Low, 2=Medium, 3=High
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Impact (1-3) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="3"
-                      value={impact}
-                      onChange={(e) => setImpact(Number(e.target.value))}
-                      className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                    <p className="text-xs text-gray-600 mt-1">
-                      1=Low, 2=Medium, 3=High
-                    </p>
-                  </div>
-                </div>
-
-                {/* Auto-calculated Results */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-rose-200">
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Risk Score</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {calculateRiskScore()}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Risk Level</p>
-                    <Badge
-                      className={`text-lg px-4 py-2 ${
-                        getRiskLevel(calculateRiskScore()) === "High"
-                          ? "bg-red-100 text-red-800"
-                          : getRiskLevel(calculateRiskScore()) === "Medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {getRiskLevel(calculateRiskScore())}
-                    </Badge>
-                  </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1">Category</label>
+                  <select 
+                    value={formData.category} 
+                    onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#1e3a8a] bg-white transition-all"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Power">Power</option>
+                    <option value="Network">Network</option>
+                    <option value="Human Error">Human Error</option>
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select category</option>
-                  <option value="Power">Power</option>
-                  <option value="Network">Network</option>
-                  <option value="Human Error">Human Error</option>
+                <label className="text-xs font-bold text-gray-500 block mb-1">Asset</label>
+                <select value={formData.asset} onChange={(e) => setFormData({...formData, asset: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                  <option value="">Select Asset</option>
+                  {availableAssets.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1">Vulnerability</label>
+                  <select value={formData.vulnerability} onChange={(e) => setFormData({...formData, vulnerability: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                    <option value="">Select Vulnerability</option>
+                    {availableVulns.map(v => <option key={v.id} value={v.description}>{v.description}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1">Threat</label>
+                  <select value={formData.threat} onChange={(e) => setFormData({...formData, threat: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                    <option value="">Select Threat</option>
+                    {availableThreats.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="flex items-center gap-2 mb-4 font-bold text-gray-700 text-xs"><Calculator className="w-4 h-4 text-[#1e3a8a]" /> Risk Matrix Selection</div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                       <span>Likelihood</span>
+                       <span className="text-[#1e3a8a]">{formData.likelihood}</span>
+                    </div>
+                    <input type="range" min="1" max="3" step="1" value={formData.likelihood} onChange={(e) => setFormData({...formData, likelihood: Number(e.target.value)})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#1e3a8a]" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                       <span>Impact</span>
+                       <span className="text-[#1e3a8a]">{formData.impact}</span>
+                    </div>
+                    <input type="range" min="1" max="3" step="1" value={formData.impact} onChange={(e) => setFormData({...formData, impact: Number(e.target.value)})} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#1e3a8a]" />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={handleAddRisk}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
-                >
-                  Save Risk
+                <Button onClick={handleSave} className="flex-1 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-bold h-11 shadow-sm">
+                  {editingId ? "Save changes" : "Confirm"}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 hover:bg-accent hover:scale-105 active:scale-95 transition-all"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                    toast.info("Add risk cancelled");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Edit Risk Modal */}
-      {showEditModal && editingRisk && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto animate-in fade-in duration-200">
-          <Card className="w-full max-w-3xl p-6 m-4 relative animate-in zoom-in-95 duration-200">
-            <button
-              onClick={() => {
-                setShowEditModal(false);
-                setEditingRisk(null);
-                resetForm();
-                toast.info("Edit cancelled");
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-primary hover:bg-accent rounded-full p-1 transition-all hover:scale-110 active:scale-95"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Edit Risk Assessment - {editingRisk.id}
-            </h3>
-            <div className="space-y-4">
-              {/* Risk Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Risk Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* Asset Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Asset *
-                </label>
-                <select
-                  value={formData.asset}
-                  onChange={(e) =>
-                    setFormData({ ...formData, asset: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select asset</option>
-                  <option value="Power System">Power System</option>
-                  <option value="Main Server">Main Server</option>
-                  <option value="POS System">POS System</option>
-                  <option value="Network Infrastructure">Network Infrastructure</option>
-                </select>
-              </div>
-
-              {/* Vulnerability Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vulnerability *
-                </label>
-                <select
-                  value={formData.vulnerability}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vulnerability: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select vulnerability</option>
-                  <option value="No backup power">No backup power source</option>
-                  <option value="No redundancy">No server redundancy</option>
-                  <option value="Single ISP">Single ISP connection</option>
-                  <option value="Outdated software">Outdated software</option>
-                </select>
-              </div>
-
-              {/* Threat Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Threat *
-                </label>
-                <select
-                  value={formData.threat}
-                  onChange={(e) =>
-                    setFormData({ ...formData, threat: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select threat</option>
-                  <option value="Power outage >4 hours">Power outage &gt;4 hours</option>
-                  <option value="Server crash">Server crash</option>
-                  <option value="Network failure">Network failure</option>
-                  <option value="Data breach">Data breach</option>
-                </select>
-              </div>
-
-              {/* Risk Calculation Section */}
-              <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator className="w-5 h-5 text-primary" />
-                  <h4 className="font-semibold text-gray-900">Risk Calculation</h4>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Likelihood (1-3) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="3"
-                      value={likelihood}
-                      onChange={(e) => setLikelihood(Number(e.target.value))}
-                      className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                    <p className="text-xs text-gray-600 mt-1">
-                      1=Low, 2=Medium, 3=High
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Impact (1-3) *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="3"
-                      value={impact}
-                      onChange={(e) => setImpact(Number(e.target.value))}
-                      className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                    <p className="text-xs text-gray-600 mt-1">
-                      1=Low, 2=Medium, 3=High
-                    </p>
-                  </div>
-                </div>
-
-                {/* Auto-calculated Results */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-rose-200">
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Risk Score</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {calculateRiskScore()}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Risk Level</p>
-                    <Badge
-                      className={`text-lg px-4 py-2 ${
-                        getRiskLevel(calculateRiskScore()) === "High"
-                          ? "bg-red-100 text-red-800"
-                          : getRiskLevel(calculateRiskScore()) === "Medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {getRiskLevel(calculateRiskScore())}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select category</option>
-                  <option value="Power">Power</option>
-                  <option value="Network">Network</option>
-                  <option value="Human Error">Human Error</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <select
-                  value={editingRisk.status}
-                  onChange={(e) =>
-                    setEditingRisk({ ...editingRisk, status: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="Not Started">Not Started</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Mitigated">Mitigated</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={handleUpdateRisk}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
-                >
-                  Update Risk
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 hover:bg-accent hover:scale-105 active:scale-95 transition-all"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingRisk(null);
-                    resetForm();
-                    toast.info("Edit cancelled");
-                  }}
-                >
-                  Cancel
-                </Button>
+                <Button variant="outline" className="flex-1 font-bold h-11 border-gray-200 text-gray-500" onClick={handleCloseModal}>Cancel</Button>
               </div>
             </div>
           </Card>

@@ -1,3 +1,6 @@
+// updated
+
+import { useState, useEffect } from "react";
 import { Eye } from "lucide-react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -11,55 +14,33 @@ import {
   TableRow,
 } from "./ui/table";
 
-const criticalRisks = [
-  {
-    id: "RISK-2024-001",
-    asset: "Student Database",
-    vulnerability: "Outdated Patch Level",
-    threat: "SQL Injection",
-    score: 25,
-    status: "In Progress",
-    statusColor: "bg-yellow-100 text-yellow-800",
-  },
-  {
-    id: "RISK-2024-002",
-    asset: "Authentication System",
-    vulnerability: "Weak Password Policy",
-    threat: "Brute Force Attack",
-    score: 24,
-    status: "Not Started",
-    statusColor: "bg-red-100 text-red-800",
-  },
-  {
-    id: "RISK-2024-003",
-    asset: "Grade Management Module",
-    vulnerability: "Missing Authorization Check",
-    threat: "Privilege Escalation",
-    score: 23,
-    status: "In Progress",
-    statusColor: "bg-yellow-100 text-yellow-800",
-  },
-  {
-    id: "RISK-2024-004",
-    asset: "File Storage Server",
-    vulnerability: "Unencrypted Backup",
-    threat: "Data Breach",
-    score: 22,
-    status: "Mitigated",
-    statusColor: "bg-green-100 text-green-800",
-  },
-  {
-    id: "RISK-2024-005",
-    asset: "API Gateway",
-    vulnerability: "Rate Limiting Disabled",
-    threat: "DDoS Attack",
-    score: 20,
-    status: "In Progress",
-    statusColor: "bg-yellow-100 text-yellow-800",
-  },
-];
+// Key untuk Local Storage
+const STORAGE_KEY = "critical_risks_data";
 
 export function CriticalRisksTable() {
+  // --- 1. LOGIKA BACK-END & 2. PENYIMPANAN LOKAL ---
+  // Inisialisasi langsung dengan array kosong
+  const [risks, setRisks] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Mengambil data dari localStorage saat komponen dimuat
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        setRisks(JSON.parse(savedData));
+      } catch (e) {
+        console.error("Gagal memuat data", e);
+        setRisks([]); // Fallback ke kosong jika JSON corrupt
+      }
+    }
+    // Tidak ada lagi inisialisasi initial data di sini
+  }, []);
+
+  const handleViewDetails = (id: string) => {
+    console.log("Viewing risk details for:", id);
+  };
+
+  // --- 3. FRONT-END ---
   return (
     <Card className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -90,37 +71,46 @@ export function CriticalRisksTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {criticalRisks.map((risk) => (
-              <TableRow key={risk.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium text-[#1e3a8a]">
-                  {risk.id}
-                </TableCell>
-                <TableCell>{risk.asset}</TableCell>
-                <TableCell>{risk.vulnerability}</TableCell>
-                <TableCell>{risk.threat}</TableCell>
-                <TableCell>
-                  <Badge className="bg-red-600 text-white hover:bg-red-700">
-                    {risk.score}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    className={`${risk.statusColor} border-0 hover:${risk.statusColor}`}
-                  >
-                    {risk.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:bg-gray-100"
-                  >
-                    <Eye className="w-4 h-4 text-gray-600" />
-                  </Button>
+            {risks.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-10 text-gray-500">
+                  No critical risks found in storage.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              risks.map((risk) => (
+                <TableRow key={risk.id} className="hover:bg-gray-50">
+                  <TableCell className="font-medium text-[#1e3a8a]">
+                    {risk.id}
+                  </TableCell>
+                  <TableCell>{risk.asset}</TableCell>
+                  <TableCell>{risk.vulnerability}</TableCell>
+                  <TableCell>{risk.threat}</TableCell>
+                  <TableCell>
+                    <Badge className="bg-red-600 text-white hover:bg-red-700 border-0">
+                      {risk.score}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={`${risk.statusColor} border-0 hover:${risk.statusColor}`}
+                    >
+                      {risk.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:bg-gray-100"
+                      onClick={() => handleViewDetails(risk.id)}
+                    >
+                      <Eye className="w-4 h-4 text-gray-600" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

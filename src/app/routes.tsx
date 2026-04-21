@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router";
+import { UserManagement } from "./components/UserManagement";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { Dashboard } from "./components/Dashboard";
 import { LoginPage } from "./components/LoginPage";
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
     Component: DashboardLayout,
     children: [
       { index: true, Component: Dashboard },
+      { path: "users", Component: UserManagement },
       { path: "assets", Component: AssetManagement },
       { path: "vulnerabilities", Component: VulnerabilityManagement },
       { path: "threats", Component: ThreatManagement },

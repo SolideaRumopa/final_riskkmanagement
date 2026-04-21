@@ -1,13 +1,7 @@
-import { Card } from "./ui/card";
+// updated
 
-// Risk matrix data: [likelihood][impact] = count
-const matrixData = [
-  [2, 3, 5, 8, 12], // Impact 1 (Very Low)
-  [4, 6, 9, 14, 18], // Impact 2 (Low)
-  [7, 11, 15, 22, 28], // Impact 3 (Medium)
-  [10, 16, 24, 32, 38], // Impact 4 (High)
-  [13, 19, 29, 35, 42], // Impact 5 (Critical)
-];
+import { useState, useEffect, useMemo } from "react";
+import { Card } from "./ui/card";
 
 // Get color based on risk score (likelihood * impact)
 const getRiskColor = (likelihood: number, impact: number) => {
@@ -25,14 +19,52 @@ const getTextColor = (likelihood: number, impact: number) => {
 };
 
 export function RiskMatrix() {
+  // --- 1. LOGIKA BACK-END & 2. PENYIMPANAN LOKAL ---
+  // Memulai dengan array kosong sebagai initial state
+  const [risks, setRisks] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Mengambil data dari localStorage yang digunakan oleh RiskManagement
+    const saved = localStorage.getItem("richeese_critical_risks");
+    if (saved) {
+      try {
+        setRisks(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse risks", e);
+        setRisks([]);
+      }
+    } else {
+      // Jika localStorage kosong, pastikan state benar-benar kosong
+      setRisks([]);
+    }
+  }, []);
+
+  // Menghitung distribusi matriks secara dinamis berdasarkan data risks
+  const matrixData = useMemo(() => {
+    // Inisialisasi matriks 5x5 dengan nilai 0
+    const matrix = Array(5).fill(0).map(() => Array(5).fill(0));
+    
+    risks.forEach((risk) => {
+      // Validasi agar data yang tidak lengkap tidak merusak rendering
+      if (risk.likelihood && risk.impact) {
+        const lIdx = Math.min(Math.max(risk.likelihood - 1, 0), 4);
+        const iIdx = Math.min(Math.max(risk.impact - 1, 0), 4);
+        matrix[iIdx][lIdx] += 1;
+      }
+    });
+    
+    return matrix;
+  }, [risks]);
+
+  // --- 3. FRONT-END INTEGRITY ---
   return (
     <Card className="p-6">
-      <div className="mb-6">
+      <div className="mb-6 text-center md:text-left">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
           University Risk Posture
         </h2>
         <p className="text-sm text-gray-600">
-          5×5 Risk Matrix - Click on any cell to view detailed risks
+          5×5 Risk Matrix - Visual distribution of identified risks
         </p>
       </div>
 
@@ -43,7 +75,7 @@ export function RiskMatrix() {
             {/* Y-Axis Label */}
             <div className="flex flex-col justify-center items-center w-12">
               <div
-                className="text-sm font-medium text-gray-700 -rotate-90"
+                className="text-sm font-bold text-gray-500 -rotate-90 uppercase tracking-widest"
                 style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
               >
                 Impact
@@ -56,8 +88,8 @@ export function RiskMatrix() {
               <div className="flex mb-2 ml-12">
                 {["1", "2", "3", "4", "5"].map((label) => (
                   <div key={label} className="flex-1 text-center">
-                    <span className="text-sm font-medium text-gray-700">
-                      {label}
+                    <span className="text-xs font-bold text-gray-400">
+                      L-{label}
                     </span>
                   </div>
                 ))}
@@ -71,8 +103,8 @@ export function RiskMatrix() {
                     <div key={rowIndex} className="flex gap-2">
                       {/* Row Label */}
                       <div className="w-10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-700">
-                          {actualImpact}
+                        <span className="text-xs font-bold text-gray-400">
+                          I-{actualImpact}
                         </span>
                       </div>
 
@@ -80,23 +112,23 @@ export function RiskMatrix() {
                       {row.map((count, colIndex) => {
                         const likelihood = colIndex + 1;
                         return (
-                          <button
+                          <div
                             key={colIndex}
                             className={`flex-1 h-20 rounded-lg ${getRiskColor(
                               likelihood,
                               actualImpact
-                            )} transition-all border-2 border-transparent hover:border-gray-800 cursor-pointer`}
+                            )} transition-all border-2 border-transparent hover:border-gray-800 flex items-center justify-center`}
                           >
                             <div
-                              className={`flex flex-col items-center justify-center h-full ${getTextColor(
+                              className={`flex flex-col items-center justify-center ${getTextColor(
                                 likelihood,
                                 actualImpact
-                              )}`}
+                              )} ${count === 0 ? "opacity-20" : "opacity-100"}`}
                             >
-                              <span className="text-2xl font-bold">{count}</span>
-                              <span className="text-xs opacity-80">risks</span>
+                              <span className="text-2xl font-black">{count}</span>
+                              <span className="text-[10px] font-bold uppercase">Risks</span>
                             </div>
-                          </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -106,7 +138,7 @@ export function RiskMatrix() {
 
               {/* X-Axis Label */}
               <div className="text-center mt-4">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">
                   Likelihood
                 </span>
               </div>
@@ -114,22 +146,22 @@ export function RiskMatrix() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-200">
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-100">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-green-400 rounded"></div>
-              <span className="text-sm text-gray-700">Low (1-3)</span>
+              <div className="w-4 h-4 bg-green-400 rounded-sm"></div>
+              <span className="text-xs font-medium text-gray-600">Low</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-yellow-300 rounded"></div>
-              <span className="text-sm text-gray-700">Medium (4-8)</span>
+              <div className="w-4 h-4 bg-yellow-300 rounded-sm"></div>
+              <span className="text-xs font-medium text-gray-600">Medium</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-orange-400 rounded"></div>
-              <span className="text-sm text-gray-700">High (9-12)</span>
+              <div className="w-4 h-4 bg-orange-400 rounded-sm"></div>
+              <span className="text-xs font-medium text-gray-600">High</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-red-500 rounded"></div>
-              <span className="text-sm text-gray-700">Critical (13+)</span>
+              <div className="w-4 h-4 bg-red-500 rounded-sm"></div>
+              <span className="text-xs font-medium text-gray-600">Critical</span>
             </div>
           </div>
         </div>

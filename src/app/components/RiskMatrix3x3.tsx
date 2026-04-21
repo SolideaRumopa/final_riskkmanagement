@@ -1,43 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "./ui/card";
 import { X } from "lucide-react";
 
-// Sample risks categorized by likelihood and impact
-const risksData = {
-  "1-1": [
-    { id: "R-009", name: "Backup Jarang Dilakukan", category: "Backup", score: 1, level: "Low" },
-  ],
-  "1-2": [
-    { id: "R-010", name: "Minor Equipment Wear", category: "Equipment", score: 2, level: "Low" },
-  ],
-  "1-3": [
-    { id: "R-011", name: "Seasonal Staff Turnover", category: "Human Error", score: 3, level: "Medium" },
-  ],
-  "2-1": [
-    { id: "R-008", name: "Delayed Maintenance", category: "Equipment", score: 2, level: "Low" },
-  ],
-  "2-2": [
-    { id: "R-005", name: "Komunikasi Manual Antar Shift", category: "Human Error", score: 4, level: "Medium" },
-    { id: "R-012", name: "Slow POS Response", category: "Network", score: 4, level: "Medium" },
-  ],
-  "2-3": [
-    { id: "R-006", name: "Staff Training Gap", category: "Human Error", score: 6, level: "Medium" },
-  ],
-  "3-1": [
-    { id: "R-007", name: "Supplier Delay Risk", category: "Supply Chain", score: 3, level: "Medium" },
-  ],
-  "3-2": [
-    { id: "R-002", name: "Jaringan Internet Buruk", category: "Network", score: 6, level: "Medium" },
-    { id: "R-013", name: "Payment Gateway Issue", category: "Network", score: 6, level: "Medium" },
-  ],
-  "3-3": [
-    { id: "R-001", name: "Ketiadaan Genset Cadangan", category: "Power", score: 9, level: "High" },
-    { id: "R-003", name: "Single Point of Failure - Server", category: "Network", score: 9, level: "High" },
-    { id: "R-004", name: "Kehilangan Data Transaksi", category: "Data Loss", score: 9, level: "High" },
-  ],
-};
-
-// Get color based on risk score
 const getRiskColor = (likelihood: number, impact: number) => {
   const score = likelihood * impact;
   if (score <= 2) return "bg-green-400 hover:bg-green-500 cursor-pointer";
@@ -56,104 +20,110 @@ interface RiskMatrix3x3Props {
 
 export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
-  const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
+  const [allRisks, setAllRisks] = useState<any[]>([]);
 
-  const handleCellClick = (likelihood: number, impact: number, event: React.MouseEvent) => {
-    const cellKey = `${likelihood}-${impact}`;
-    const risks = risksData[cellKey as keyof typeof risksData] || [];
+  useEffect(() => {
+    const loadMatrixData = () => {
+      // 1. UBAH KEY: Mengambil data aktual dari RiskManagement
+      const saved = localStorage.getItem("richeese_risk_management_data");
+      if (saved) {
+        try {
+          setAllRisks(JSON.parse(saved));
+        } catch (e) {
+          console.error("Error parsing risks", e);
+          setAllRisks([]);
+        }
+      } else {
+        setAllRisks([]);
+      }
+    };
+
+    loadMatrixData();
+    window.addEventListener("storage", loadMatrixData);
+    return () => window.removeEventListener("storage", loadMatrixData);
+  }, []);
+
+  const risksData = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
     
-    if (risks.length > 0) {
+    allRisks.forEach((risk) => {
+      const l = Math.min(Math.max(risk.likelihood, 1), 3);
+      const i = Math.min(Math.max(risk.impact, 1), 3);
+      
+      const key = `${l}-${i}`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(risk);
+    });
+    
+    return grouped;
+  }, [allRisks]);
+
+  const handleCellClick = (likelihood: number, impact: number) => {
+    const cellKey = `${likelihood}-${impact}`;
+    const risksInCell = risksData[cellKey] || [];
+    
+    if (risksInCell.length > 0) {
       setSelectedCell(cellKey);
-      const rect = (event.target as HTMLElement).getBoundingClientRect();
-      setModalPosition({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      });
     }
   };
 
-  const closeModal = () => {
-    setSelectedCell(null);
-  };
-
-  const selectedRisks = selectedCell ? (risksData[selectedCell as keyof typeof risksData] || []) : [];
+  const closeModal = () => setSelectedCell(null);
+  const selectedRisks = selectedCell ? (risksData[selectedCell] || []) : [];
 
   return (
     <>
       <Card className="p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Risk Matrix Dashboard - Richeese Factory Airmadidi
+            Risk Matrix Dashboard
           </h2>
           <p className="text-sm text-gray-600">
-            3×3 Risk Matrix - Klik pada sel untuk melihat detail risiko
+            3×3 Matrix - Klik pada angka dalam sel untuk melihat detail risiko
           </p>
         </div>
 
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full">
-            {/* Matrix Container */}
             <div className="flex gap-4">
-              {/* Y-Axis Label */}
               <div className="flex flex-col justify-center items-center w-12">
-                <div
-                  className="text-sm font-medium text-gray-700 -rotate-90"
-                  style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-                >
-                  IMPACT (Dampak)
+                <div className="text-xs font-bold text-gray-400 -rotate-90 uppercase tracking-widest" style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}>
+                  Impact
                 </div>
               </div>
 
-              {/* Matrix */}
               <div className="flex-1">
-                {/* Column Headers */}
                 <div className="flex mb-2 ml-16">
-                  {["Low (1)", "Medium (2)", "High (3)"].map((label) => (
+                  {["Low", "Medium", "High"].map((label) => (
                     <div key={label} className="flex-1 text-center">
-                      <span className="text-xs font-medium text-gray-700">
-                        {label}
-                      </span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">{label}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Matrix Rows (reversed to show High at top) */}
                 <div className="space-y-2">
                   {[3, 2, 1].map((impact) => (
                     <div key={impact} className="flex gap-2">
-                      {/* Row Label */}
-                      <div className="w-14 flex items-center justify-end pr-2">
-                        <span className="text-xs font-medium text-gray-700">
-                          {impact === 3 ? "High (3)" : impact === 2 ? "Med (2)" : "Low (1)"}
+                      <div className="w-14 flex items-center justify-end pr-3">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase text-right leading-tight">
+                          {impact === 3 ? "High" : impact === 2 ? "Med" : "Low"}
                         </span>
                       </div>
 
-                      {/* Row Cells */}
                       {[1, 2, 3].map((likelihood) => {
                         const cellKey = `${likelihood}-${impact}`;
-                        const risks = risksData[cellKey as keyof typeof risksData] || [];
-                        const score = likelihood * impact;
+                        const risksInCell = risksData[cellKey] || [];
+                        const count = risksInCell.length;
 
                         return (
                           <button
                             key={likelihood}
-                            onClick={(e) => handleCellClick(likelihood, impact, e)}
-                            className={`flex-1 h-28 rounded-lg ${getRiskColor(
-                              likelihood,
-                              impact
-                            )} transition-all border-2 border-transparent hover:border-gray-800`}
+                            disabled={count === 0}
+                            onClick={() => handleCellClick(likelihood, impact)}
+                            className={`flex-1 h-24 rounded-lg ${getRiskColor(likelihood, impact)} transition-all border-2 border-transparent ${count > 0 ? "hover:border-gray-800 shadow-sm" : "opacity-30 grayscale-[0.5]"}`}
                           >
-                            <div
-                              className={`flex flex-col items-center justify-center h-full ${getTextColor(
-                                likelihood,
-                                impact
-                              )}`}
-                            >
-                              <span className="text-3xl font-bold">{risks.length}</span>
-                              <span className="text-xs opacity-80 mb-1">risiko</span>
-                              <span className="text-xs font-medium px-2 py-1 bg-white/20 rounded">
-                                Score: {score}
-                              </span>
+                            <div className={`flex flex-col items-center justify-center h-full ${getTextColor(likelihood, impact)}`}>
+                              <span className="text-3xl font-black">{count}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Risks</span>
                             </div>
                           </button>
                         );
@@ -162,51 +132,28 @@ export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
                   ))}
                 </div>
 
-                {/* X-Axis Label */}
-                <div className="text-center mt-4">
-                  <span className="text-sm font-medium text-gray-700">
-                    LIKELIHOOD (Kemungkinan)
-                  </span>
+                <div className="text-center mt-6">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Likelihood</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-green-400 rounded"></div>
-                <span className="text-sm text-gray-700">Low (1-2)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-yellow-300 rounded"></div>
-                <span className="text-sm text-gray-700">Medium (3-4)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-red-500 rounded"></div>
-                <span className="text-sm text-gray-700">High (6-9)</span>
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Modal for showing risks in selected cell */}
       {selectedCell && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl p-6 m-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Risks in this Category
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg p-6 m-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                Risk Details <span className="text-gray-400 font-normal">({selectedRisks.length})</span>
               </h3>
-              <button
-                onClick={closeModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-full">
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
               {selectedRisks.map((risk) => (
                 <div
                   key={risk.id}
@@ -214,33 +161,15 @@ export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
                     onRiskSelect(risk);
                     closeModal();
                   }}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="p-4 border-l-4 border-l-[#1e3a8a] bg-gray-50 rounded-r-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-[#1e3a8a]">
-                          {risk.id}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            risk.level === "High"
-                              ? "bg-red-100 text-red-800"
-                              : risk.level === "Medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {risk.level}
-                        </span>
-                      </div>
-                      <p className="font-medium text-gray-900 mb-1">{risk.name}</p>
-                      <p className="text-sm text-gray-600">Category: {risk.category}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Risk Score</p>
-                      <p className="text-2xl font-bold text-gray-900">{risk.score}</p>
-                    </div>
+                  <p className="text-xs font-bold text-[#1e3a8a] mb-1">{risk.id}</p>
+                  <p className="font-semibold text-gray-900 leading-tight mb-2">{risk.name}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase font-bold text-gray-500">{risk.category}</span>
+                    <span className="text-xs font-black px-2 py-0.5 bg-white rounded border border-gray-200">
+                      SCORE: {risk.likelihood * risk.impact}
+                    </span>
                   </div>
                 </div>
               ))}

@@ -1,47 +1,83 @@
-import { AlertTriangle, TrendingUp, Shield, Target } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertTriangle, Shield, Target } from "lucide-react";
 import { Card } from "./ui/card";
 
-// Mock data - in real app, this would come from state management or API
-const kpiData = [
-  {
-    title: "Total Risks",
-    value: "24",
-    icon: Target,
-    iconColor: "text-blue-600",
-    bgColor: "bg-blue-100",
-    change: "4 new this week",
-    changeColor: "text-gray-600",
-  },
-  {
-    title: "High Risks",
-    value: "6",
-    icon: AlertTriangle,
-    iconColor: "text-red-600",
-    bgColor: "bg-red-100",
-    change: "Immediate action required",
-    changeColor: "text-red-600",
-  },
-  {
-    title: "Medium Risks",
-    value: "11",
-    icon: AlertTriangle,
-    iconColor: "text-yellow-600",
-    bgColor: "bg-yellow-100",
-    change: "Monitor closely",
-    changeColor: "text-yellow-600",
-  },
-  {
-    title: "Low Risks",
-    value: "7",
-    icon: Shield,
-    iconColor: "text-green-600",
-    bgColor: "bg-green-100",
-    change: "Under control",
-    changeColor: "text-green-600",
-  },
-];
-
 export function KPICards() {
+  const [stats, setStats] = useState({
+    total: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    newThisWeek: 0
+  });
+
+  useEffect(() => {
+    const loadData = () => {
+      // 1. UBAH KEY: Mengambil data aktual dari RiskManagement
+      const savedRisks = localStorage.getItem("richeese_risk_management_data");
+      const risks = savedRisks ? JSON.parse(savedRisks) : [];
+
+      // 2. PERBAIKAN LOGIKA: Sesuaikan dengan skala 3x3 (1-9)
+      const high = risks.filter((r: any) => (r.likelihood * r.impact) >= 6).length;
+      const medium = risks.filter((r: any) => {
+        const s = r.likelihood * r.impact;
+        return s >= 3 && s < 6;
+      }).length;
+      const low = risks.filter((r: any) => (r.likelihood * r.impact) <= 2).length;
+
+      setStats({
+        total: risks.length,
+        high: high,
+        medium: medium,
+        low: low,
+        newThisWeek: 0 
+      });
+    };
+
+    loadData();
+    window.addEventListener("storage", loadData);
+    return () => window.removeEventListener("storage", loadData);
+  }, []);
+
+  const kpiData = [
+    {
+      title: "Total Risks",
+      value: stats.total.toString(),
+      icon: Target,
+      iconColor: "text-blue-600",
+      bgColor: "bg-blue-100",
+      change: stats.total > 0 ? "Real-time sync active" : "No risks recorded",
+      changeColor: "text-gray-600",
+    },
+    {
+      title: "High Risks",
+      value: stats.high.toString(),
+      icon: AlertTriangle,
+      iconColor: "text-red-600",
+      bgColor: "bg-red-100",
+      change: stats.high > 0 ? "Immediate action required" : "No high risks",
+      changeColor: stats.high > 0 ? "text-red-600" : "text-gray-500",
+    },
+    {
+      title: "Medium Risks",
+      value: stats.medium.toString(),
+      icon: AlertTriangle,
+      iconColor: "text-yellow-600",
+      bgColor: "bg-yellow-100",
+      change: stats.medium > 0 ? "Monitor closely" : "No medium risks",
+      changeColor: stats.medium > 0 ? "text-yellow-600" : "text-gray-500",
+    },
+    {
+      title: "Low Risks",
+      value: stats.low.toString(),
+      icon: Shield,
+      iconColor: "text-green-600",
+      bgColor: "bg-green-100",
+      change: stats.low > 0 ? "Under control" : "No low risks",
+      changeColor: stats.low > 0 ? "text-green-600" : "text-gray-500",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {kpiData.map((kpi, index) => {
