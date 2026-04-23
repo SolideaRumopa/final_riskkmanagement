@@ -52,7 +52,7 @@ export function CriticalRisksTable() {
             Highest priority risks requiring immediate attention
           </p>
         </div>
-        <Button variant="outline" className="text-[#1e3a8a] border-[#1e3a8a]">
+        <Button variant="outline" className="text-[#EB1D29] border-[#EB1D29]">
           View All Risks
         </Button>
       </div>
@@ -80,7 +80,7 @@ export function CriticalRisksTable() {
             ) : (
               risks.map((risk) => (
                 <TableRow key={risk.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium text-[#1e3a8a]">
+                  <TableCell className="font-medium text-[#EB1D29]">
                     {risk.id}
                   </TableCell>
                   <TableCell>{risk.asset}</TableCell>

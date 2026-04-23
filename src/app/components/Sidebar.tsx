@@ -12,6 +12,8 @@ import {
   Target,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+// @ts-ignore
+import logo from "../../assets/logo.png"; 
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["Admin", "Manager", "Crew"] },
@@ -71,15 +73,15 @@ export function Sidebar() {
     : [];
 
   return (
-    <aside className="w-64 bg-[#1e3a8a] text-white flex flex-col h-full shadow-xl">
-      <div className="p-6 border-b border-blue-700">
+    <aside className="w-64 bg-[#EB1D29] text-white flex flex-col h-full shadow-xl">
+      <div className="p-6 border-b border-red-700">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-            <Shield className="w-6 h-6 text-[#1e3a8a]" />
+            <img src={logo} alt="Richeese Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="font-semibold text-lg leading-tight">Richeese Factory</h1>
-            <p className="text-xs text-blue-200">Risk Management</p>
+            <p className="text-xs text-red-200">Risk Management</p>
           </div>
         </div>
       </div>
@@ -99,8 +101,8 @@ export function Sidebar() {
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
-                    ? "bg-blue-700 text-white shadow-inner"
-                    : "text-blue-100 hover:bg-blue-800"
+                    ? "bg-red-700 text-white shadow-inner"
+                    : "text-red-100 hover:bg-red-800"
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -110,21 +112,21 @@ export function Sidebar() {
           })
         ) : (
           <div className="px-4 py-10 text-center">
-            <p className="text-xs text-blue-300 italic">No access available</p>
+            <p className="text-xs text-red-300 italic">No access available</p>
           </div>
         )}
       </nav>
 
-      <div className="p-4 border-t border-blue-700 bg-blue-900/20">
-        <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-blue-800/30 rounded-xl">
-          <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center border border-blue-500/30">
-            <User className="w-5 h-5 text-blue-100" />
+      <div className="p-4 border-t border-red-700 bg-red-900/20">
+        <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-red-800/30 rounded-xl">
+          <div className="w-10 h-10 bg-red-700 rounded-full flex items-center justify-center border border-red-500/30">
+            <User className="w-5 h-5 text-red-100" />
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-bold truncate">
               {user?.name || "Unauthenticated"}
             </p>
-            <p className="text-[10px] uppercase tracking-wider text-blue-300 truncate">
+            <p className="text-[10px] tracking-wider text-red-300 truncate">
               {user?.role || "Guest Mode"}
             </p>
           </div>
@@ -132,7 +134,7 @@ export function Sidebar() {
         
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-blue-200 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-all border border-transparent hover:border-red-500/20"
+          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-red-200 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-all border border-transparent hover:border-red-500/20"
         >
           <LogOut className="w-4 h-4" />
           Log Out

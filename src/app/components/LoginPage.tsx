@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Shield, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff } from "lucide-react";
+// @ts-ignore
+import logo from "../../assets/logo.png"; 
 
 const STORAGE_KEY = "system_users";
-const HISTORY_KEY = "richeese_risk_history"; // Key yang digunakan RiskHistory
+const HISTORY_KEY = "richeese_risk_history";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,7 +17,6 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Logika Backend: Mencatat aktivitas login ke dalam riwayat
   const addLoginLog = (user: any) => {
     try {
       const newEntry = {
@@ -32,7 +33,6 @@ export function LoginPage() {
       const updatedHistory = [newEntry, ...existingHistory].slice(0, 50);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
       
-      // Pemicu agar komponen lain (seperti RiskHistory) tahu ada data baru
       window.dispatchEvent(new Event("storage"));
     } catch (err) {
       console.error("Failed to update history:", err);
@@ -75,11 +75,10 @@ export function LoginPage() {
 
       if (user) {
         const { password: _, ...userSession } = user;
-        
-        // Eksekusi Logika Pencatatan Riwayat
         addLoginLog(user);
         
         localStorage.setItem("user", JSON.stringify(userSession));
+        localStorage.setItem("richeese_current_user", JSON.stringify(userSession)); // Tambahkan ini agar Sidebar sinkron
         localStorage.setItem("login_at", new Date().toISOString());
         navigate("/", { replace: true });
       } else {
@@ -89,24 +88,29 @@ export function LoginPage() {
     }, 800);
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-xl">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-[#1e3a8a] rounded-lg flex items-center justify-center mb-4 shadow-lg text-white">
-            <Shield size={40} />
-          </div>
-          <h1 className="text-2xl font-semibold text-gray-900">Risk Management</h1>
-          <p className="text-sm text-gray-500 mt-2 italic text-center">Richeese Factory Airmadidi</p>
+return (
+  <div className="min-h-screen bg-gradient-to-br from-[#EB1D29] to-[#ffffff] flex items-center justify-center p-4">
+    <Card className="w-full max-w-md p-8 shadow-xl">
+      <div className="flex flex-col items-center mb-8">
+        {/* Border putih dan background telah dihapus agar logo menyatu dengan background Card */}
+        <div className="w-24 h-24 flex items-center justify-center mb-4 overflow-hidden">
+          <img 
+            src={logo} 
+            alt="Richeese Logo" 
+            className="w-full h-full object-contain"
+          />
         </div>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Risk Management</h1>
+        <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-widest">Richeese Factory Airmadidi</p>
+      </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-xs font-bold text-gray-500 mb-2">Email</label>
             <input
               type="email" required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-              placeholder="Enter your email"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#EB1D29] outline-none transition-all"
+              placeholder="xxxxx@richeese.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -114,12 +118,12 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <label className="block text-xs font-bold text-gray-500 mb-2">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"} required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a8a] outline-none pr-10"
-                placeholder="Enter your password"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#EB1D29] outline-none pr-10 transition-all"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
@@ -127,7 +131,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -135,18 +139,18 @@ export function LoginPage() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-100">
+            <div className="flex items-center gap-2 text-red-600 text-[11px] font-bold bg-red-50 p-3 rounded-lg border border-red-100 animate-shake">
               <AlertTriangle className="w-4 h-4" />
-              {error}
+              {error.toUpperCase()}
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white h-12 font-bold shadow-md transition-all"
+            className="w-full bg-[#EB1D29] hover:bg-red-700 text-white h-12 font-black uppercase tracking-widest shadow-lg transition-all active:scale-[0.98]"
             disabled={isLoading}
           >
-            {isLoading ? "Authenticating..." : "Login"}
+            {isLoading ? "Authenticating..." : "Log in"}
           </Button>
         </form>
       </Card>

@@ -16,7 +16,7 @@ interface HistoryItem {
 const TYPE_CONFIG = {
   alert: { icon: <AlertTriangle className="w-5 h-5 text-red-600" />, color: "bg-red-50 border-red-200" },
   success: { icon: <TrendingDown className="w-5 h-5 text-green-600" />, color: "bg-green-50 border-green-200" },
-  update: { icon: <TrendingUp className="w-5 h-5 text-blue-600" />, color: "bg-blue-50 border-blue-200" },
+  update: { icon: <TrendingUp className="w-5 h-5 text-red-600" />, color: "bg-red-50 border-red-200" },
   login: { icon: <UserCheck className="w-5 h-5 text-purple-600" />, color: "bg-purple-50 border-purple-200" },
   default: { icon: <History className="w-5 h-5 text-gray-600" />, color: "bg-gray-50 border-gray-200" },
 };
@@ -58,17 +58,17 @@ export function RiskHistory() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">History</h1>
-        <p className="text-sm text-gray-600 mt-1">Track all activities</p>
+        <p className="text-sm text-gray-600 mt-1">Lacak semua aktivitas</p>
       </div>
 
       <Card className="p-4 shadow-sm border-gray-200">
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Filter User</label>
+            <label className="text-[10px] font-bold text-gray-400 ml-1">Filter User</label>
             <select 
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] text-sm bg-white min-w-[200px]"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EB1D29] text-sm bg-white min-w-[200px]"
             >
               <option value="">All Users</option>
               {availableUsers.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
@@ -76,17 +76,17 @@ export function RiskHistory() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Filter Date</label>
+            <label className="text-[10px] font-bold text-gray-400 ml-1">Filter Date</label>
             <input
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] text-sm bg-white"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EB1D29] text-sm bg-white"
             />
           </div>
 
           {(filterUser || filterDate) && (
-            <button onClick={() => { setFilterUser(""); setFilterDate(""); }} className="mt-5 text-xs text-[#1e3a8a] font-bold hover:underline">
+            <button onClick={() => { setFilterUser(""); setFilterDate(""); }} className="mt-5 text-xs text-[#EB1D29] font-bold hover:underline">
               Reset Filters
             </button>
           )}

@@ -78,7 +78,7 @@ export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
             Risk Matrix Dashboard
           </h2>
           <p className="text-sm text-gray-600">
-            3×3 Matrix - Klik pada angka dalam sel untuk melihat detail risiko
+            Klik pada angka dalam sel untuk melihat detail risiko
           </p>
         </div>
 
@@ -161,9 +161,9 @@ export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
                     onRiskSelect(risk);
                     closeModal();
                   }}
-                  className="p-4 border-l-4 border-l-[#1e3a8a] bg-gray-50 rounded-r-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="p-4 border-l-4 border-l-[#EB1D29] bg-gray-50 rounded-r-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <p className="text-xs font-bold text-[#1e3a8a] mb-1">{risk.id}</p>
+                  <p className="text-xs font-bold text-[#EB1D29] mb-1">{risk.id}</p>
                   <p className="font-semibold text-gray-900 leading-tight mb-2">{risk.name}</p>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] uppercase font-bold text-gray-500">{risk.category}</span>

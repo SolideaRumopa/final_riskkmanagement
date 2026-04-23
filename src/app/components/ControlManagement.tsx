@@ -139,11 +139,11 @@ export function ControlManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Control Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Define and track mitigation controls for identified risks</p>
+          <p className="text-sm text-gray-600 mt-1">Menentukan dan melacak kontrol mitigasi untuk risiko yang teridentifikasi</p>
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white flex items-center gap-2"
+          className="bg-[#EB1D29] hover:bg-[#EB1D29] text-white flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Add Control
         </Button>
@@ -158,7 +158,7 @@ export function ControlManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search controls..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EB1D29]"
             />
           </div>
           <select 
@@ -209,10 +209,10 @@ export function ControlManagement() {
               ) : (
                 filteredControls.map((control) => (
                   <TableRow key={control.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-[#1e3a8a]">{control.id}</TableCell>
+                    <TableCell className="font-medium text-[#EB1D29]">{control.id}</TableCell>
                     <TableCell className="font-medium">{control.name}</TableCell>
                     <TableCell>
-                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-0">
+                      <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-0">
                         {control.type}
                       </Badge>
                     </TableCell>
@@ -233,7 +233,7 @@ export function ControlManagement() {
                     <TableCell>
                       <div className="flex items-center justify-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(control)}>
-                          <Edit className="w-4 h-4 text-blue-600" />
+                          <Edit className="w-4 h-4 text-[#EB1D29]" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(control.id)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
@@ -261,8 +261,8 @@ export function ControlManagement() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                  placeholder="Control name..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]"
+                  placeholder="Password policy"
                 />
               </div>
               
@@ -297,7 +297,7 @@ export function ControlManagement() {
 
               {/* Field Estimasi Biaya Baru */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost (Rp)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost</label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">
                     Rp
@@ -306,8 +306,8 @@ export function ControlManagement() {
                     type="number"
                     value={formData.estimatedCost}
                     onChange={(e) => setFormData({...formData, estimatedCost: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                    placeholder="Contoh: 500000"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]"
+                    placeholder="500000"
                   />
                 </div>
               </div>
@@ -342,8 +342,8 @@ export function ControlManagement() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button onClick={handleSave} className="flex-1 bg-[#1e3a8a] hover:bg-[#1e40af] text-white">
-                  {editingId ? "Save changes" : "Confirm"}
+                <Button onClick={handleSave} className="flex-1 bg-[#EB1D29] hover:bg-[#EB1D29] text-white">
+                  {editingId ? "Update Control" : "Confirm Control"}
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={handleCloseModal}>
                   Cancel

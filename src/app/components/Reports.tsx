@@ -101,8 +101,8 @@ export function Reports() {
     };
 
     generateSection("1. ASSETS", 
-      [["ID", "Name", "Value", "Category"]],
-      assets.map((a: any) => [a.id || '-', a.name, a.value, a.category])
+      [["ID", "Name", "Category", "Type", "Quantity", "Total Value"]],
+      assets.map((a: any) => [a.id || '-', a.name, a.category, a.type, a.quantity, a.value])
     );
 
     generateSection("2. VULNERABILITIES", 
@@ -115,14 +115,44 @@ export function Reports() {
       threats.map((t: any) => [t.id || '-', t.name, t.vulnerability, t.category, t.probability])
     );
 
-    generateSection("4. RISKS", 
-      [["ID", "Name", "Category", "L x I", "Score", "Level"]],
-      risksData.map((r: any) => {
-        const score = (r.likelihood || 0) * (r.impact || 0);
-        const level = score >= 6 ? "HIGH" : score >= 3 ? "MEDIUM" : "LOW";
-        return [r.id || '-', r.name, r.category, `${r.likelihood} x ${r.impact}`, score, level];
-      })
-    );
+generateSection("4. RISKS", 
+  [["ID", "Name", "Asset", "Vulnerability", "Threat", "Category", "Score", "Calculated Value", "Level"]],
+  risksData.map((r: any) => {
+    // 1. Ambil likelihood dan impact dari data risiko
+    const likelihood = r.likelihood || 0;
+    const impact = r.impact || 0;
+    const score = likelihood * impact;
+
+    // 2. Cari asset yang sesuai untuk mendapatkan nilai finansialnya
+    const relatedAsset = assets.find((a: any) => a.name === r.asset);
+    const assetValue = relatedAsset ? (relatedAsset.value * (relatedAsset.quantity || 1)) : 0;
+
+    // 3. Hitung Calculated Value
+    const calculatedValue = score * assetValue;
+
+    // 4. Tentukan Level
+    const level = score >= 6 ? "HIGH" : score >= 3 ? "MEDIUM" : "LOW";
+
+    // Format calculatedValue ke dalam Rupiah agar rapi di PDF
+    const formattedCalculatedValue = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(calculatedValue);
+
+    return [
+      r.id || '-', 
+      r.name, 
+      r.asset, 
+      r.vulnerability, 
+      r.threat, 
+      r.category, 
+      score, 
+      formattedCalculatedValue, // Nilai yang sudah diperbaiki
+      level
+    ];
+  })
+);
 
     generateSection("5. CONTROLS", 
       [["ID", "Name", "Type", "Related Risk", "Cost Estimation", "Priority", "Status"]],
@@ -152,10 +182,10 @@ export function Reports() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <Card className="p-6 border-l-4 border-l-blue-900 shadow-sm">
+        <Card className="p-6 border-l-4 border-l-red-900 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <FileText className="w-6 h-6 text-blue-900" />
+            <div className="p-3 bg-red-100 rounded-lg">
+              <FileText className="w-6 h-6 text-red-900" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 mb-2">Export Comprehensive PDF</h3>
@@ -164,7 +194,7 @@ export function Reports() {
               </p>
               <Button 
                 onClick={handleExportPDF}
-                className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-bold"
+                className="bg-[#EB1D29] hover:bg-[#000000] text-white font-bold"
               >
                 <FileDown className="w-4 h-4 mr-2" />
                 Download PDF Report
@@ -209,19 +239,19 @@ export function Reports() {
           {/* 4 Kotak Statistik: Total, High, Medium, Low */}
           <div className="grid grid-cols-4 gap-4">
             <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-tighter">Total Risk</p>
+              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Total Risks</p>
               <p className="text-2xl font-black text-gray-900">{stats.total}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-tighter">High Risks</p>
+              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">High Risks</p>
               <p className="text-2xl font-black text-red-600">{stats.high}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-tighter">Medium Risks</p>
+              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Medium Risks</p>
               <p className="text-2xl font-black text-yellow-600">{stats.medium}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-tighter">Low Risks</p>
+              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Low Risks</p>
               <p className="text-2xl font-black text-green-600">{stats.low}</p>
             </div>
           </div>

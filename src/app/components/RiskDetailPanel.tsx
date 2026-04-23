@@ -67,8 +67,8 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
       <Card className="w-full max-w-2xl h-full overflow-y-auto animate-in slide-in-from-right duration-300 shadow-2xl rounded-l-2xl border-none">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-50 p-2 rounded-lg">
-              <Info className="w-5 h-5 text-[#1e3a8a]" />
+            <div className="bg-red-50 p-2 rounded-lg">
+              <Info className="w-5 h-5 text-[#EB1D29]" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Risk Analysis Details</h2>
           </div>
@@ -84,7 +84,7 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
           {/* Header Section */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <span className="px-3 py-1 bg-blue-50 text-[#1e3a8a] text-xs font-bold rounded-full border border-blue-100">
+              <span className="px-3 py-1 bg-red-50 text-[#EB1D29] text-xs font-bold rounded-full border border-red-100">
                 {risk.id}
               </span>
               <Badge
@@ -112,7 +112,7 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
             {[
               { label: "Likelihood", value: risk.likelihood, color: "text-gray-900" },
               { label: "Impact", value: risk.impact, color: "text-gray-900" },
-              { label: "Final Score", value: score, color: isHigh ? "text-red-600" : isMedium ? "text-amber-600" : "text-green-600" }
+              { label: "Score", value: score, color: isHigh ? "text-red-600" : isMedium ? "text-amber-600" : "text-green-600" }
             ].map((item, i) => (
               <div key={i} className="bg-gray-50 p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-2">{item.label}</p>
@@ -124,20 +124,20 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
           {/* Details Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-[#1e3a8a]" />
+              <AlertTriangle className="w-5 h-5 text-[#EB1D29]" />
               <h4 className="font-bold text-gray-900 uppercase text-xs tracking-widest">Environment Context</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Affected Asset</p>
+                <p className="text-[10px] font-bold text-gray-400 mb-1">Asset</p>
                 <p className="font-bold text-gray-800">{risk.asset || "N/A"}</p>
               </div>
               <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Detected Threat</p>
+                <p className="text-[10px] font-bold text-gray-400 mb-1">Threat</p>
                 <p className="font-bold text-gray-800">{risk.threat || "N/A"}</p>
               </div>
               <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm md:col-span-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Vulnerability Description</p>
+                <p className="text-[10px] font-bold text-gray-400 mb-1">Vulnerability</p>
                 <p className="font-bold text-gray-800">{risk.vulnerability || "No detailed vulnerability data."}</p>
               </div>
             </div>
@@ -147,12 +147,9 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[#1e3a8a]" />
+                <Shield className="w-5 h-5 text-[#EB1D29]" />
                 <h4 className="font-bold text-gray-900 uppercase text-xs tracking-widest">Mitigation Status</h4>
               </div>
-              <Badge className="bg-blue-50 text-[#1e3a8a] border-blue-100 shadow-none">
-                {relatedControls.length} Controls Active
-              </Badge>
             </div>
             
             <div className="space-y-3">
@@ -186,7 +183,7 @@ export function RiskDetailPanel({ risk: initialRisk, onClose }: RiskDetailPanelP
           <div className="flex gap-4 pt-6 border-t border-gray-100">
             <Button 
               onClick={handleUpdateStatus}
-              className="flex-1 bg-[#1e3a8a] hover:bg-blue-800 text-white font-bold h-12 rounded-xl shadow-md transition-all active:scale-95"
+              className="flex-1 bg-[#EB1D29] hover:bg-red-800 text-white font-bold h-12 rounded-xl shadow-md transition-all active:scale-95"
             >
               Update Risk
             </Button>
