@@ -149,32 +149,37 @@ export function ControlManagement() {
         </Button>
       </div>
 
-      <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Input Pencarian */}
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search controls..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EB1D29]"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
             />
           </div>
+
+          {/* Filter Type */}
           <select 
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none bg-white"
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
           >
             <option value="">All Types</option>
             <option value="Prevent">Prevent</option>
             <option value="Detect">Detect</option>
             <option value="Recover">Recover</option>
           </select>
+
+          {/* Filter Status */}
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none bg-white"
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
           >
             <option value="">All Status</option>
             <option value="Completed">Completed</option>
@@ -184,68 +189,82 @@ export function ControlManagement() {
         </div>
       </Card>
 
-      <Card className="p-6">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+      <Card className="overflow-x-auto border-none shadow-sm bg-white">
+        <Table className="min-w-max">
+          <TableHeader className="bg-gray-50/50">
+            <TableRow>
+              <TableHead className="font-bold text-gray-700 w-[80px]">ID</TableHead>
+              <TableHead className="font-bold text-gray-700">Name</TableHead>
+              <TableHead className="font-bold text-gray-700">Type</TableHead>
+              <TableHead className="font-bold text-gray-700">Related Risk</TableHead>
+              <TableHead className="font-bold text-gray-700">Cost Estimation</TableHead>
+              <TableHead className="font-bold text-gray-700">Priority</TableHead>
+              <TableHead className="font-bold text-gray-700">Status</TableHead>
+              <TableHead className="font-bold text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredControls.length === 0 ? (
               <TableRow>
-                <TableHead className="font-semibold">ID</TableHead>
-                <TableHead className="font-semibold">Name</TableHead>
-                <TableHead className="font-semibold">Type</TableHead>
-                <TableHead className="font-semibold">Related Risk</TableHead>
-                <TableHead className="font-semibold">Cost Estimation</TableHead> {/* Kolom Baru */}
-                <TableHead className="font-semibold">Priority</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold text-center">Actions</TableHead>
+                <TableCell colSpan={8} className="h-64 text-center">
+                  <div className="flex flex-col items-center justify-center text-gray-400 italic">
+                    <p>No data found.</p>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredControls.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    No controls found.
+            ) : (
+              filteredControls.map((control) => (
+                <TableRow key={control.id} className="group hover:bg-gray-50/50 transition-colors">
+                  <TableCell className="font-bold text-[#EB1D29]">{control.id}</TableCell>
+                  <TableCell className="font-medium text-gray-900">{control.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200 bg-gray-50">
+                      {control.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-gray-600 text-sm">{control.relatedRisk}</TableCell>
+                  <TableCell className="font-bold text-gray-700 whitespace-nowrap">
+                    {formatCurrency(control.estimatedCost)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={`border-0 ${
+                        control.priority === "High" 
+                          ? "bg-red-50 text-red-700 border-red-100" 
+                          : "bg-yellow-50 text-yellow-700 border-yellow-100"
+                      }`}
+                    >
+                      {control.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={`border-0 ${
+                        control.status === "Completed" 
+                          ? "bg-green-50 text-green-700 border-green-100" 
+                          : control.status === "In Progress" 
+                            ? "bg-blue-50 text-blue-700 border-blue-100" 
+                            : "bg-gray-50 text-gray-700 border-gray-100"
+                      }`}
+                    >
+                      {control.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(control)}>
+                        <Edit className="w-4 h-4 text-[#EB1D29]" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(control.id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredControls.map((control) => (
-                  <TableRow key={control.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-[#EB1D29]">{control.id}</TableCell>
-                    <TableCell className="font-medium">{control.name}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-0">
-                        {control.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{control.relatedRisk}</TableCell>
-                    <TableCell className="font-medium text-gray-700">
-                      {formatCurrency(control.estimatedCost)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`border-0 ${control.priority === "High" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>
-                        {control.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`border-0 ${control.status === "Completed" ? "bg-green-100 text-green-800" : control.status === "In Progress" ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-800"}`}>
-                        {control.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(control)}>
-                          <Edit className="w-4 h-4 text-[#EB1D29]" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(control.id)}>
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
       {showAddModal && (

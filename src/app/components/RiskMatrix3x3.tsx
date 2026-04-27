@@ -84,54 +84,64 @@ export function RiskMatrix3x3({ onRiskSelect }: RiskMatrix3x3Props) {
 
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full">
-            <div className="flex gap-4">
-              <div className="flex flex-col justify-center items-center w-12">
-                <div className="text-xs font-bold text-gray-400 -rotate-90 uppercase tracking-widest" style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}>
-                  Impact
-                </div>
+          <div className="flex gap-4">
+            {/* Perbaikan: Menambah lebar w-12 ke w-16 dan menghapus pembatas yang terlalu ketat */}
+            <div className="flex flex-col justify-center items-center w-16 relative">
+              <div 
+                className="text-xs font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap" 
+                style={{ 
+                  writingMode: "vertical-rl", 
+                  transform: "rotate(180deg)", // Memutar agar "I" berada di atas (opsional)
+                  textAlign: "center"
+                }}
+              >
+                Impact
+              </div>
+            </div>
+
+            <div className="flex-1">
+              {/* Label Horizontal (Likelihood) */}
+              <div className="flex mb-2 ml-16">
+                {["Low", "Medium", "High"].map((label) => (
+                  <div key={label} className="flex-1 text-center">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">{label}</span>
+                  </div>
+                ))}
               </div>
 
-              <div className="flex-1">
-                <div className="flex mb-2 ml-16">
-                  {["Low", "Medium", "High"].map((label) => (
-                    <div key={label} className="flex-1 text-center">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase">{label}</span>
+              {/* Baris Sel Matrix */}
+              <div className="space-y-2">
+                {[3, 2, 1].map((impact) => (
+                  <div key={impact} className="flex gap-2">
+                    {/* Label per baris (High, Med, Low) */}
+                    <div className="w-16 flex items-center justify-end pr-3">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase text-right leading-tight">
+                        {impact === 3 ? "High" : impact === 2 ? "Med" : "Low"}
+                      </span>
                     </div>
-                  ))}
-                </div>
 
-                <div className="space-y-2">
-                  {[3, 2, 1].map((impact) => (
-                    <div key={impact} className="flex gap-2">
-                      <div className="w-14 flex items-center justify-end pr-3">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase text-right leading-tight">
-                          {impact === 3 ? "High" : impact === 2 ? "Med" : "Low"}
-                        </span>
-                      </div>
+                    {[1, 2, 3].map((likelihood) => {
+                      const cellKey = `${likelihood}-${impact}`;
+                      const risksInCell = risksData[cellKey] || [];
+                      const count = risksInCell.length;
 
-                      {[1, 2, 3].map((likelihood) => {
-                        const cellKey = `${likelihood}-${impact}`;
-                        const risksInCell = risksData[cellKey] || [];
-                        const count = risksInCell.length;
-
-                        return (
-                          <button
-                            key={likelihood}
-                            disabled={count === 0}
-                            onClick={() => handleCellClick(likelihood, impact)}
-                            className={`flex-1 h-24 rounded-lg ${getRiskColor(likelihood, impact)} transition-all border-2 border-transparent ${count > 0 ? "hover:border-gray-800 shadow-sm" : "opacity-30 grayscale-[0.5]"}`}
-                          >
-                            <div className={`flex flex-col items-center justify-center h-full ${getTextColor(likelihood, impact)}`}>
-                              <span className="text-3xl font-black">{count}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Risks</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-
+                      return (
+                        <button
+                          key={likelihood}
+                          disabled={count === 0}
+                          onClick={() => handleCellClick(likelihood, impact)}
+                          className={`flex-1 h-24 rounded-lg ${getRiskColor(likelihood, impact)} transition-all border-2 border-transparent ${count > 0 ? "hover:border-gray-800 shadow-sm" : "opacity-30 grayscale-[0.5]"}`}
+                        >
+                          <div className={`flex flex-col items-center justify-center h-full ${getTextColor(likelihood, impact)}`}>
+                            <span className="text-3xl font-black">{count}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Risks</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
                 <div className="text-center mt-6">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Likelihood</span>
                 </div>

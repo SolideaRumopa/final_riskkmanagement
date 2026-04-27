@@ -30,6 +30,7 @@ export function RiskManagement() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -139,11 +140,13 @@ export function RiskManagement() {
     });
   };
 
-  const filteredRisks = risks.filter((r) =>
-    r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+const filteredRisks = risks.filter((r) => {
+  const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        r.id.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesLevel = levelFilter === "" || r.level === levelFilter;
+  
+  return matchesSearch && matchesLevel;
+});
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
@@ -156,17 +159,33 @@ export function RiskManagement() {
         </Button>
       </div>
 
-      <Card className="p-4 border-none shadow-sm bg-white/50 backdrop-blur-sm">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search risks..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 transition-all"
-          />
-        </div>
-      </Card>
+<Card className="p-4 bg-white border border-gray-200 shadow-sm">
+  <div className="flex flex-col md:flex-row gap-4">
+    {/* Input Pencarian */}
+    <div className="relative flex-1 group">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Search risks..."
+        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
+      />
+    </div>
 
+    {/* Filter Risk Level */}
+    <select 
+      value={levelFilter}
+      onChange={(e) => setLevelFilter(e.target.value)}
+      className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
+    >
+      <option value="">All Levels</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+  </div>
+</Card>
       <Card className="overflow-x-auto border-none shadow-sm bg-white">
         <Table className="min-w-max">
           <TableHeader className="bg-gray-50/50">
@@ -201,8 +220,7 @@ export function RiskManagement() {
                     </TableCell>
                     <TableCell className="text-gray-600 text-sm">{risk.threat}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200">
-                        {risk.category}
+                      <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200 bg-gray-50">                        {risk.category}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
@@ -212,12 +230,26 @@ export function RiskManagement() {
                     <TableCell className="font-bold text-[#EB1D29] whitespace-nowrap">
                       Rp {calculatedRisk.toLocaleString("id-ID")}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={risk.level === "High" ? "bg-red-50 text-red-700 border-red-100" : risk.level === "Medium" ? "bg-yellow-50 text-yellow-700 border-yellow-100" : "bg-green-50 text-green-700 border-green-100"}>
-                        {risk.level}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={`${
+                        risk.level === "High" 
+                          ? "bg-red-50 text-red-700 border-red-100" 
+                          : risk.level === "Medium" 
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-100" 
+                            : "bg-green-50 text-green-700 border-green-100"
+                      } cursor-help`}
+                      title={
+                        risk.level === "High" 
+                          ? "Skor 5-9" 
+                          : risk.level === "Medium" 
+                            ? "Skor 3-4" 
+                            : "Skor 1-2"
+                      }
+                    >
+                      {risk.level}
+                    </Badge>
+                  </TableCell>                    <TableCell>
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setEditingId(risk.id); setFormData(risk); setShowAddModal(true); }}><Edit className="w-4 h-4 text-[#EB1D29]" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(risk.id)}><Trash2 className="w-4 h-4 text-red-600" /></Button>

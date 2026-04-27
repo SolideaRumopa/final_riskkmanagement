@@ -46,7 +46,7 @@ export function KPICards() {
       icon: Target,
       iconColor: "text-red-600",
       bgColor: "bg-red-100",
-      change: stats.total > 0 ? "Real-time sync active" : "No risks recorded",
+      change: stats.total > 0 ? "Overall risk" : "No risks recorded",
       changeColor: "text-gray-600",
     },
     {
@@ -55,7 +55,7 @@ export function KPICards() {
       icon: AlertTriangle,
       iconColor: "text-red-600",
       bgColor: "bg-red-100",
-      change: stats.high > 0 ? "Immediate action required" : "No high risks",
+      change: stats.high > 0 ? "Urgent action required" : "No high risks",
       changeColor: stats.high > 0 ? "text-red-600" : "text-gray-500",
     },
     {
@@ -64,7 +64,7 @@ export function KPICards() {
       icon: AlertTriangle,
       iconColor: "text-yellow-600",
       bgColor: "bg-yellow-100",
-      change: stats.medium > 0 ? "Monitor closely" : "No medium risks",
+      change: stats.medium > 0 ? "Needs attention" : "No medium risks",
       changeColor: stats.medium > 0 ? "text-yellow-600" : "text-gray-500",
     },
     {
@@ -73,7 +73,7 @@ export function KPICards() {
       icon: Shield,
       iconColor: "text-green-600",
       bgColor: "bg-green-100",
-      change: stats.low > 0 ? "Under control" : "No low risks",
+      change: stats.low > 0 ? "No major disruption" : "No low risks",
       changeColor: stats.low > 0 ? "text-green-600" : "text-gray-500",
     },
   ];

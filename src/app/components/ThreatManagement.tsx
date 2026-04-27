@@ -29,6 +29,7 @@ export function ThreatManagement() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [probabilityFilter, setProbabilityFilter] = useState(""); // Filter probability baru
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingThreat, setEditingThreat] = useState<any>(null);
   
@@ -59,13 +60,11 @@ export function ThreatManagement() {
   const handleSave = () => {
     let finalCategory = formData.category;
 
-    // Validasi data lengkap
     if (!formData.name || !formData.vulnerability || !formData.category || !formData.probability) {
       alert("Harap melengkapi semua data terlebih dahulu.");
       return;
     }
 
-    // Jika user membuat kategori baru
     if (formData.category === "Other") {
       if (!customCategory.trim()) {
         alert("Harap masukkan nama kategori baru.");
@@ -77,16 +76,13 @@ export function ThreatManagement() {
       }
     }
 
-    // --- LOGIKA ID OTOMATIS (T-001) ---
     let finalId = editingThreat ? editingThreat.id : "";
     
     if (!editingThreat) {
       let nextNumber = 1;
       if (threats.length > 0) {
-        // Mengambil ID terakhir untuk menentukan urutan berikutnya
         const lastThreat = threats[threats.length - 1];
         const lastIdParts = lastThreat.id?.split("-");
-        // Jika format ID lama masih timestamp, kita gunakan panjang array + 1
         nextNumber = (lastIdParts && lastIdParts.length > 1) 
           ? parseInt(lastIdParts[1]) + 1 
           : threats.length + 1;
@@ -128,95 +124,140 @@ export function ThreatManagement() {
     setFormData({ name: "", vulnerability: "", category: "", probability: "" });
   };
 
-  const filteredThreats = threats.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.vulnerability.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (t.id && t.id.toLowerCase().includes(searchTerm.toLowerCase()))
+  // Logika Filter (Search + Probability)
+  const filteredThreats = threats.filter(t => {
+    const matchesSearch = 
+      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.vulnerability.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.id && t.id.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesProbability = probabilityFilter === "" || t.probability === probabilityFilter;
+    
+    return matchesSearch && matchesProbability;
+  });
+
+  // Filter Vulnerability Unik untuk Dropdown
+  const uniqueVulnerabilities = vulnerabilities.filter((v, index, self) =>
+    index === self.findIndex((t) => t.description === v.description)
   );
 
   return (
     <div className="space-y-6">
+      {/* Header Section */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Threat Management</h1>
-          <p className="text-sm text-gray-500">Daftar potensi ancaman terhadap aset perusahaan</p>
+          <p className="text-sm text-gray-500 mt-1">Daftar potensi ancaman terhadap aset perusahaan</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-[#EB1D29] text-white shadow-sm">
+        <Button onClick={() => setShowAddModal(true)} className="bg-[#EB1D29] text-white shadow-md hover:bg-[#c11822] transition-all">
           <Plus className="w-4 h-4 mr-2" /> Add Threat
         </Button>
       </div>
 
-      <Card className="p-4 border-none shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search threats or related vulnerabilities..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg outline-none focus:border-[#EB1D29] transition-all"
-          />
+      {/* Search & Filter Bar (Desain Konsisten dengan Vulnerability) */}
+      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search threats or vulnerabilities..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
+            />
+          </div>
+
+          <select 
+            value={probabilityFilter}
+            onChange={(e) => setProbabilityFilter(e.target.value)}
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
+          >
+            <option value="">All Probabilities</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
         </div>
       </Card>
 
-      <Card className="overflow-hidden border-none shadow-sm">
-        <Table>
-          <TableHeader className="bg-gray-50/50">
-            <TableRow>
-              <TableHead className="font-bold text-xs">ID</TableHead>
-              <TableHead className="font-bold text-xs">Name</TableHead>
-              <TableHead className="font-bold text-xs">Related Vulnerability</TableHead>
-              <TableHead className="font-bold text-xs">Category</TableHead>
-              <TableHead className="font-bold text-xs">Probability</TableHead>
-              <TableHead className="font-bold text-xs text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredThreats.map((threat) => (
-              <TableRow key={threat.id} className="hover:bg-gray-50/50 transition-colors">
-                <TableCell className="font-bold text-[#EB1D29]">{threat.id}</TableCell>
-                <TableCell className="font-bold text-gray-900">{threat.name}</TableCell>
-                <TableCell className="text-gray-900 text-sm">{threat.vulnerability}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-red-50 text-[#EB1D29] border-red-100">
-                    {threat.category}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={
-                    threat.probability === 'High' ? 'bg-red-100 text-red-700' :
-                    threat.probability === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
-                  }>
-                    {threat.probability}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setEditingThreat(threat);
-                      setFormData(threat);
-                      setShowAddModal(true);
-                    }}>
-                      <Edit className="w-4 h-4 text-[#EB1D29]" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(threat.id)}>
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      {/* Table Section */}
+<Card className="overflow-x-auto border-none shadow-sm bg-white">
+  <Table className="min-w-max">
+    <TableHeader className="bg-gray-50/50">
+      <TableRow>
+        <TableHead className="font-bold text-gray-700 w-[80px]">ID</TableHead>
+        <TableHead className="font-bold text-gray-700">Name</TableHead>
+        <TableHead className="font-bold text-gray-700">Related Vulnerability</TableHead>
+        <TableHead className="font-bold text-gray-700 text-center">Category</TableHead>
+        <TableHead className="font-bold text-gray-700 text-center">Probability</TableHead>
+        <TableHead className="font-bold text-center">Actions</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {filteredThreats.length > 0 ? (
+        filteredThreats.map((threat) => (
+          <TableRow key={threat.id} className="group hover:bg-gray-50/50 transition-colors">
+            <TableCell className="font-bold text-[#EB1D29]">{threat.id}</TableCell>
+            <TableCell className="font-bold text-gray-900">{threat.name}</TableCell>
+            <TableCell className="text-gray-600 text-sm max-w-[250px] truncate" title={threat.vulnerability}>
+              {threat.vulnerability}
+            </TableCell>
+            
+            {/* Category Badge - Gaya Abu-abu Konsisten */}
+            <TableCell className="text-center">
+              <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200 bg-gray-50">
+                {threat.category}
+              </Badge>
+            </TableCell>
 
+            {/* Probability Badge - Gaya Soft */}
+            <TableCell className="text-center">
+              <Badge className={`border-0 ${
+                threat.probability === 'High' ? 'bg-red-50 text-red-700 border-red-100' :
+                threat.probability === 'Medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                'bg-green-50 text-green-700 border-green-100'
+              }`}>
+                {threat.probability}
+              </Badge>
+            </TableCell>
+
+            <TableCell>
+              <div className="flex justify-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setEditingThreat(threat);
+                  setFormData(threat);
+                  setShowAddModal(true);
+                }}>
+                  <Edit className="w-4 h-4 text-[#EB1D29]" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(threat.id)}>
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell colSpan={6} className="h-64 text-center">
+            <div className="flex flex-col items-center justify-center text-gray-400 italic">
+              <p>No threats found.</p>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</Card>
+
+      {/* Modal Section */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">{editingThreat ? "Update Threat" : "Add New Threat"}</h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -228,7 +269,7 @@ export function ThreatManagement() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Hacker"
+                  placeholder="Contoh: Serangan DDoS"
                   className="w-full px-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29]"
                 />
               </div>
@@ -241,7 +282,7 @@ export function ThreatManagement() {
                   className="w-full px-4 py-2 border rounded-lg outline-none bg-white focus:border-[#EB1D29]"
                 >
                   <option value="">Select Vulnerability</option>
-                  {vulnerabilities.map((v) => (
+                  {uniqueVulnerabilities.map((v) => (
                     <option key={v.id} value={v.description}>{v.description}</option>
                   ))}
                 </select>
@@ -284,6 +325,7 @@ export function ThreatManagement() {
                   {["Low", "Medium", "High"].map((p) => (
                     <button
                       key={p}
+                      type="button"
                       onClick={() => setFormData({...formData, probability: p})}
                       className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-all ${
                         formData.probability === p ? "bg-[#EB1D29] text-white border-[#EB1D29]" : "bg-white text-gray-500 border-gray-200"
@@ -296,7 +338,7 @@ export function ThreatManagement() {
               </div>
 
               <div className="flex gap-3 pt-6 border-t mt-6">
-                <Button onClick={handleSave} className="flex-1 bg-[#EB1D29] text-white font-bold py-6">
+                <Button onClick={handleSave} className="flex-1 bg-[#EB1D29] text-white font-bold py-6 hover:bg-[#c11822]">
                   {editingThreat ? "Update Threat" : "Confirm Threat"}
                 </Button>
                 <Button variant="outline" onClick={closeModal} className="flex-1 py-6 font-bold">Cancel</Button>

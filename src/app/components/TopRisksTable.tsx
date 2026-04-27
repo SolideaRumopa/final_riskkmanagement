@@ -148,7 +148,7 @@ export function TopRisksTable({ onRiskSelect }: TopRisksTableProps) {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-[#EB1D29] text-white text-xs font-bold shadow-sm">
-                        {finalCalcValue.toLocaleString()}
+                        Rp {finalCalcValue.toLocaleString()}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -175,8 +175,8 @@ export function TopRisksTable({ onRiskSelect }: TopRisksTableProps) {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-gray-400 italic text-sm">
-                  Tidak ada risiko kritis yang ditemukan.
+                <TableCell colSpan={8} className="h-32 text-center text-gray-400 text-sm">
+                  No data found.
                 </TableCell>
               </TableRow>
             )}

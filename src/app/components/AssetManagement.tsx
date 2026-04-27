@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Search, X } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
+// Tambahkan import Badge jika tersedia di folder ui Anda
+import { Badge } from "./ui/badge"; 
 import {
   Table,
   TableBody,
@@ -12,13 +14,12 @@ import {
 } from "./ui/table";
 
 export function AssetManagement() {
-  // Load Assets dari LocalStorage
+  // --- LOGIKA TETAP SAMA ---
   const [assets, setAssets] = useState<any[]>(() => {
     const savedAssets = localStorage.getItem("richeese_assets");
     return savedAssets ? JSON.parse(savedAssets) : [];
   });
 
-  // Load Categories dari LocalStorage (atau gunakan default jika kosong)
   const [categories, setCategories] = useState<string[]>(() => {
     const savedCats = localStorage.getItem("richeese_asset_categories");
     const defaultCats = ["Information", "Hardware", "Software", "Network", "People", "Process"];
@@ -28,7 +29,6 @@ export function AssetManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any | null>(null);
-  
   const [customCategory, setCustomCategory] = useState("");
   const [isCustom, setIsCustom] = useState(false);
 
@@ -40,7 +40,6 @@ export function AssetManagement() {
     type: "Tangible"
   });
 
-  // Sync Assets & Categories ke LocalStorage
   useEffect(() => {
     localStorage.setItem("richeese_assets", JSON.stringify(assets));
   }, [assets]);
@@ -64,31 +63,24 @@ export function AssetManagement() {
 
   const handleSaveAsset = (e: React.FormEvent) => {
     e.preventDefault();
-    
     let finalCategory = formData.category;
-
-    // Jika user membuat kategori baru
     if (formData.category === "Other" && customCategory.trim() !== "") {
       finalCategory = customCategory.trim();
-      // Tambahkan ke daftar kategori jika belum ada
       if (!categories.includes(finalCategory)) {
         setCategories(prev => [...prev, finalCategory]);
       }
     }
-
     const qty = Number(formData.quantity);
     if (!formData.name || !formData.value || !finalCategory || qty < 1) {
       alert("Harap isi semua data dengan benar.");
       return;
     }
-
     const assetData = {
       ...formData,
       category: finalCategory,
       value: Number(formData.value),
       quantity: qty,
     };
-
     if (editingAsset) {
       const updatedAssets = assets.map((a) =>
         a.id === editingAsset.id ? { ...a, ...assetData } : a
@@ -102,11 +94,9 @@ export function AssetManagement() {
         nextNumber = lastIdParts.length > 1 ? parseInt(lastIdParts[1]) + 1 : assets.length + 1;
       }
       const nextId = `A-${nextNumber.toString().padStart(3, "0")}`;
-
       const assetToAdd = { id: nextId, ...assetData, status: "Active" };
       setAssets([...assets, assetToAdd]);
     }
-
     closeModal();
   };
 
@@ -131,79 +121,102 @@ export function AssetManagement() {
 
   return (
     <div className="space-y-6">
+      {/* 1. Header Section - Meniru VulnerabilityManagement */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Asset Management</h1>
           <p className="text-sm text-gray-500 mt-1">Kelola daftar aset organisasi secara sistematis</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="bg-[#EB1D29] text-white">
+        <Button 
+          onClick={() => setShowModal(true)} 
+          className="bg-[#EB1D29] hover:bg-[#EB1D29] text-white shadow-md transition-all"
+        >
           <Plus className="w-4 h-4 mr-2" /> Add Asset
         </Button>
       </div>
 
-      <Card className="p-4 border-none shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* 2. Search Bar - Desain yang lebih bersih dan modern */}
+      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search assets or categories..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg outline-none focus:border-[#EB1D29]"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
           />
         </div>
       </Card>
 
+      {/* 3. Table Section - Mengikuti style VulnerabilityManagement */}
       <Card className="overflow-hidden border-none shadow-sm">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="font-bold text-xs">ID</TableHead>
-              <TableHead className="font-bold text-xs">Name</TableHead>
-              <TableHead className="font-bold text-xs">Category</TableHead>
-              <TableHead className="font-bold text-xs">Type</TableHead>
-              <TableHead className="font-bold text-xs text-center">Qty</TableHead>
-              <TableHead className="font-bold text-xs text-[#EB1D29]">Total Value</TableHead>
-              <TableHead className="font-bold text-xs text-center">Actions</TableHead>
+              <TableHead className="font-bold">ID</TableHead>
+              <TableHead className="font-bold">Name</TableHead>
+              <TableHead className="font-bold">Category</TableHead>
+              <TableHead className="font-bold">Type</TableHead>
+              <TableHead className="font-bold text-center">Quantity</TableHead>
+              <TableHead className="font-bold text-[#EB1D29]">Total Value</TableHead>
+              <TableHead className="font-bold text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {filteredAssets.map((asset) => (
-              <TableRow key={asset.id} className="hover:bg-gray-50/50 transition-colors">
-                <TableCell className="font-bold text-[#EB1D29]">{asset.id}</TableCell>
-                <TableCell className="font-medium text-gray-900">{asset.name}</TableCell>
-                <TableCell>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider">
-                    {asset.category}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                    asset.type === 'Intangible' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {asset.type}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center font-medium">{asset.quantity}</TableCell>
-                <TableCell className="font-bold text-[#EB1D29]">
-                  Rp {((asset.quantity || 1) * (asset.value || 0)).toLocaleString("id-ID")}
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditClick(asset)} className="h-8 w-8 p-0">
-                      <Edit className="w-4 h-4 text-[#EB1D29]" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)} className="h-8 w-8 p-0">
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+<TableBody>
+  {filteredAssets.length > 0 ? (
+    filteredAssets.map((asset) => (
+      <TableRow key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+        <TableCell className="font-bold text-[#EB1D29]">{asset.id}</TableCell>
+        <TableCell className="font-medium text-gray-900">{asset.name}</TableCell>
+        
+        {/* Category: Menggunakan gaya Badge standar gray seperti Related Asset */}
+        <TableCell>
+          <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100 shadow-none border-none">
+            {asset.category}
+          </Badge>
+        </TableCell>
+
+        {/* Type: Menggunakan logika warna dinamis seperti Severity */}
+        <TableCell>
+          <Badge 
+            className={
+              asset.type === "Tangible" 
+                ? "bg-red-100 text-red-700 shadow-none border-none" 
+                : "bg-purple-100 text-purple-700 shadow-none border-none"
+            }
+          >
+            {asset.type}
+          </Badge>
+        </TableCell>
+
+        <TableCell className="text-center font-medium">{asset.quantity}</TableCell>
+        <TableCell className="font-bold text-[#EB1D29]">
+          Rp {((asset.quantity || 1) * (asset.value || 0)).toLocaleString("id-ID")}
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => handleEditClick(asset)} className="h-8 w-8 p-0">
+              <Edit className="w-4 h-4 text-red-600" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)} className="h-8 w-8 p-0">
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ))
+  ) : (
+    <TableRow>
+      <TableCell colSpan={7} className="text-center py-10 text-gray-400">
+        No data found.
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>        </Table>
       </Card>
 
+      {/* Modal Section - Tetap Menggunakan UI Yang Sudah Ada (Sudah Bagus) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md p-6 shadow-2xl">
@@ -218,7 +231,7 @@ export function AssetManagement() {
                 <input
                   type="text" required value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29]"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 focus:border-[#EB1D29]"
                   placeholder="Laptop"
                 />
               </div>
@@ -229,14 +242,14 @@ export function AssetManagement() {
                   <input
                     type="number" required min="1" value={formData.quantity}
                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                    className="w-full px-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29]"
+                    className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 focus:border-[#EB1D29]"
                   />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 block mb-1">Type</label>
                   <select 
                     value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}
-                    className="w-full px-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29] bg-white"
+                    className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 focus:border-[#EB1D29] bg-white cursor-pointer"
                   >
                     <option value="Tangible">Tangible</option>
                     <option value="Intangible">Intangible</option>
@@ -244,26 +257,22 @@ export function AssetManagement() {
                 </div>
               </div>
 
-<div className="grid grid-cols-2 gap-4">
-  <div>
-    <label className="text-xs font-bold text-gray-500 block mb-1">Value</label>
-    <div className="relative">
-      {/* Simbol Rp di posisi absolute */}
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">
-        Rp
-      </div>
-      <input
-        type="number"
-        required
-        min="0"
-        value={formData.value}
-        onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-        /* PERBAIKAN: Gunakan pl-10 agar angka tidak tertutup teks Rp */
-        className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29] transition-all"
-        placeholder="10000000"
-      />
-    </div>
-  </div>                <div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1">Value</label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">
+                      Rp
+                    </div>
+                    <input
+                      type="number" required min="0" value={formData.value}
+                      onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 focus:border-[#EB1D29]"
+                      placeholder="10000000"
+                    />
+                  </div>
+                </div>                
+                <div>
                   <label className="text-xs font-bold text-gray-500 block mb-1">Category</label>
                   <select 
                     required value={formData.category}
@@ -271,7 +280,7 @@ export function AssetManagement() {
                       setFormData({...formData, category: e.target.value});
                       setIsCustom(e.target.value === "Other");
                     }}
-                    className="w-full px-4 py-2 border rounded-lg outline-none focus:border-[#EB1D29] bg-white"
+                    className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#EB1D29]/10 focus:border-[#EB1D29] bg-white cursor-pointer"
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => (
@@ -295,7 +304,7 @@ export function AssetManagement() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" className="flex-1 bg-[#EB1D29] text-white py-6">
+                <Button type="submit" className="flex-1 bg-[#EB1D29] hover:bg-[#c11721] text-white py-6">
                   {editingAsset ? "Update Asset" : "Confirm Asset"}
                 </Button>
                 <Button type="button" variant="outline" onClick={closeModal} className="flex-1 py-6">Cancel</Button>
