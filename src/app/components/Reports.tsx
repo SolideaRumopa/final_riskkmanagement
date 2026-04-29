@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { FileDown, FileText } from "lucide-react";
+import { FileDown, Database, ShieldAlert, Zap } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export function Reports() {
   const [risks, setRisks] = useState<any[]>([]);
-  const [stats, setStats] = useState({
+  const [assets, setAssets] = useState<any[]>([]);
+  const [vulnerabilities, setVulnerabilities] = useState<any[]>([]);
+  const [threats, setThreats] = useState<any[]>([]);
+  const [controls, setControls] = useState<any[]>([]);
+
+  const [, setStats] = useState({
     total: 0,
     high: 0,
     medium: 0,
@@ -15,30 +20,39 @@ export function Reports() {
   });
 
   const RISK_STORAGE_KEY = "richeese_risk_management_data";
+  const ASSET_STORAGE_KEY = "richeese_assets";
+  const VULN_STORAGE_KEY = "richeese_vulnerabilities";
+  const THREAT_STORAGE_KEY = "richeese_threat_catalog";
+  const CONTROL_STORAGE_KEY = "richeese_control_data";
 
   useEffect(() => {
     const loadData = () => {
       const savedRisks = localStorage.getItem(RISK_STORAGE_KEY);
+      const savedAssets = localStorage.getItem(ASSET_STORAGE_KEY);
+      const savedVulns = localStorage.getItem(VULN_STORAGE_KEY);
+      const savedThreats = localStorage.getItem(THREAT_STORAGE_KEY);
+      const savedControls = localStorage.getItem(CONTROL_STORAGE_KEY);
+
       if (savedRisks) {
-        try {
-          const parsedRisks = JSON.parse(savedRisks);
-          setRisks(parsedRisks);
-          
-          // Hitung statistik berdasarkan score (Likelihood * Impact)
-          setStats({
-            total: parsedRisks.length,
-            high: parsedRisks.filter((r: any) => (r.likelihood * r.impact) >= 6).length,
-            medium: parsedRisks.filter((r: any) => {
-              const score = r.likelihood * r.impact;
-              return score >= 3 && score < 6;
-            }).length,
-            low: parsedRisks.filter((r: any) => (r.likelihood * r.impact) < 3).length
-          });
-        } catch (e) {
-          console.error("Error parsing risks data", e);
-        }
+        const parsedRisks = JSON.parse(savedRisks);
+        setRisks(parsedRisks);
+        setStats({
+          total: parsedRisks.length,
+          high: parsedRisks.filter((r: any) => (r.likelihood * r.impact) >= 6).length,
+          medium: parsedRisks.filter((r: any) => {
+            const score = r.likelihood * r.impact;
+            return score >= 3 && score < 6;
+          }).length,
+          low: parsedRisks.filter((r: any) => (r.likelihood * r.impact) < 3).length,
+        });
       }
+
+      if (savedAssets) setAssets(JSON.parse(savedAssets));
+      if (savedVulns) setVulnerabilities(JSON.parse(savedVulns));
+      if (savedThreats) setThreats(JSON.parse(savedThreats));
+      if (savedControls) setControls(JSON.parse(savedControls));
     };
+
     loadData();
     window.addEventListener('storage', loadData);
     return () => window.removeEventListener('storage', loadData);
@@ -115,148 +129,170 @@ export function Reports() {
       threats.map((t: any) => [t.id || '-', t.name, t.vulnerability, t.category, t.probability])
     );
 
-generateSection("4. RISKS", 
-  [["ID", "Name", "Asset", "Vulnerability", "Threat", "Category", "Score", "Calculated Value", "Level"]],
-  risksData.map((r: any) => {
-    // 1. Ambil likelihood dan impact dari data risiko
-    const likelihood = r.likelihood || 0;
-    const impact = r.impact || 0;
-    const score = likelihood * impact;
-
-    // 2. Cari asset yang sesuai untuk mendapatkan nilai finansialnya
-    const relatedAsset = assets.find((a: any) => a.name === r.asset);
-    const assetValue = relatedAsset ? (relatedAsset.value * (relatedAsset.quantity || 1)) : 0;
-
-    // 3. Hitung Calculated Value
-    const calculatedValue = score * assetValue;
-
-    // 4. Tentukan Level
-    const level = score >= 6 ? "HIGH" : score >= 3 ? "MEDIUM" : "LOW";
-
-    // Format calculatedValue ke dalam Rupiah agar rapi di PDF
-    const formattedCalculatedValue = new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(calculatedValue);
-
-    return [
-      r.id || '-', 
-      r.name, 
-      r.asset, 
-      r.vulnerability, 
-      r.threat, 
-      r.category, 
-      score, 
-      formattedCalculatedValue, // Nilai yang sudah diperbaiki
-      level
-    ];
-  })
-);
-
-    generateSection("5. CONTROLS", 
-      [["ID", "Name", "Type", "Related Risk", "Cost Estimation", "Priority", "Status"]],
-      controls.map((c: any) => [
-        c.id || '-', 
-        c.name, 
-        c.type, 
-        c.relatedRisk, 
-        new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-          minimumFractionDigits: 0,
-        }).format(c.estimatedCost || 0),
-        c.priority, 
-        c.status
-      ])
-    );
-
-    doc.save(`Richeese_Risk_Report_${Date.now()}.pdf`);
+    doc.save("Richeese_Risk_Report.pdf");
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
-        <p className="text-sm text-gray-600 mt-1">Laporan komprehensif sistem manajemen risiko</p>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">REPORTS</h1>
+          <p className="text-gray-500 font-medium">Risk Matrix & Integrated Data Analysis</p>
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={handleExportPDF} className="bg-[#EB1D29] hover:bg-[#c11721] text-white flex items-center gap-2 shadow-lg">
+            <FileDown className="w-4 h-4" /> Export Comprehensive PDF
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="p-6 border-l-4 border-l-red-900 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-red-100 rounded-lg">
-              <FileText className="w-6 h-6 text-red-900" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-2">Export Comprehensive PDF</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Dokumen PDF berisi data terintegrasi: Aset, Kerentanan, Ancaman, Penilaian Risiko, dan Kontrol Mitigasi.
-              </p>
-              <Button 
-                onClick={handleExportPDF}
-                className="bg-[#EB1D29] hover:bg-[#000000] text-white font-bold"
-              >
-                <FileDown className="w-4 h-4 mr-2" />
-                Download PDF Report
-              </Button>
-            </div>
+      {/* Stats Summary Footer */}
+      <div className="grid grid-cols-4 gap-4 mt-6">
+        <div className="p-4 bg-gray-100 rounded-xl text-center border">
+          <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">Total Assets</p>
+          <p className="text-2xl font-black text-gray-900">{assets.length}</p>
+        </div>
+        <div className="p-4 bg-gray-100 rounded-xl text-center border">
+          <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">Total Vulns</p>
+          <p className="text-2xl font-black text-gray-900">{vulnerabilities.length}</p>
+        </div>
+        <div className="p-4 bg-gray-100 rounded-xl text-center border">
+          <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">Total Threats</p>
+          <p className="text-2xl font-black text-gray-900">{threats.length}</p>
+        </div>
+        <div className="p-4 bg-gray-100 rounded-xl text-center border">
+          <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">Total Controls</p>
+          <p className="text-2xl font-black text-gray-900">{controls.length}</p>
+        </div>
+      </div>
+
+      {/* --- INTEGRATED DATA MATRICES --- */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-6">
+        
+        {/* 1. Asset / Vulnerability Matrix */}
+        <Card className="p-6 border-none shadow-xl bg-white rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b pb-2">
+            <Database className="w-5 h-5 text-blue-600" />
+            <h3 className="font-black text-sm text-gray-800 uppercase">Asset / Vulnerability Matrix</h3>
+          </div>
+          <div className="overflow-auto max-h-[400px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Asset Name</th>
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Vulnerabilities</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs">
+                {assets.length > 0 ? assets.map(asset => {
+                  const linkedVulns = vulnerabilities.filter(v => v.asset === asset.name || v.asset === asset.id);
+                  return (
+                    <tr key={asset.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2 font-bold text-gray-700">{asset.name}</td>
+                      <td className="p-2">
+                        {linkedVulns.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {linkedVulns.map((v, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 font-medium">
+                                {v.description}
+                              </span>
+                            ))}
+                          </div>
+                        ) : <span className="text-gray-300 italic">No vulnerability linked</span>}
+                      </td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={2} className="p-4 text-center text-gray-400 italic">No assets found</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* 2. Vulnerability / Threat Matrix */}
+        <Card className="p-6 border-none shadow-xl bg-white rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b pb-2">
+            <ShieldAlert className="w-5 h-5 text-orange-600" />
+            <h3 className="font-black text-sm text-gray-800 uppercase">Vulnerability / Threat Matrix</h3>
+          </div>
+          <div className="overflow-auto max-h-[400px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Vulnerability</th>
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Exploited By Threats</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs">
+                {vulnerabilities.length > 0 ? vulnerabilities.map((vuln, idx) => {
+                  const matchingRisks = risks.filter(r => r.vulnerabilityName === vuln.description);
+                  const uniqueThreats = Array.from(new Set(matchingRisks.map(r => r.threatName)));
+
+                  return (
+                    <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2 font-bold text-gray-700">{vuln.description}</td>
+                      <td className="p-2">
+                        {uniqueThreats.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {uniqueThreats.map((t, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-md border border-orange-100 font-medium">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        ) : <span className="text-gray-300 italic">No threats identified</span>}
+                      </td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={2} className="p-4 text-center text-gray-400 italic">No vulnerabilities found</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* 3. Threat / Control Matrix */}
+        <Card className="p-6 border-none shadow-xl bg-white rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b pb-2">
+            <Zap className="w-5 h-5 text-green-600" />
+            <h3 className="font-black text-sm text-gray-800 uppercase">Threat / Control Matrix</h3>
+          </div>
+          <div className="overflow-auto max-h-[400px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Threat Name</th>
+                  <th className="p-2 text-[10px] font-black text-gray-500 uppercase">Mitigation Controls</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs">
+                {threats.length > 0 ? threats.map((threat, idx) => {
+                  const relatedRisks = risks.filter(r => r.threatName === threat.name);
+                  const mitigatingControls = controls.filter(c => 
+                    relatedRisks.some(r => r.name === c.relatedRisk || `${r.id} - ${r.name}` === c.relatedRisk)
+                  );
+
+                  return (
+                    <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2 font-bold text-gray-700">{threat.name}</td>
+                      <td className="p-2">
+                        {mitigatingControls.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {mitigatingControls.map((c, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md border border-green-100 font-medium">
+                                {c.name} ({c.status})
+                              </span>
+                            ))}
+                          </div>
+                        ) : <span className="text-gray-300 italic">No controls applied</span>}
+                      </td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={2} className="p-4 text-center text-gray-400 italic">No threats found</td></tr>}
+              </tbody>
+            </table>
           </div>
         </Card>
       </div>
 
-      <Card className="p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Summary</h2>
-        <div className="space-y-6">
-          <div>
-            <h3 className="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-3">Top 5 Critical Risks</h3>
-            <div className="space-y-2">
-              {risks.length === 0 ? (
-                <div className="p-8 text-center border-2 border-dashed rounded-lg text-gray-400">
-                  Belum ada data risiko.
-                </div>
-              ) : (
-                risks
-                  .sort((a, b) => (b.likelihood * b.impact) - (a.likelihood * a.impact))
-                  .slice(0, 5)
-                  .map((risk, idx) => {
-                    const score = risk.likelihood * risk.impact;
-                    return (
-                      <div key={idx} className={`flex items-center justify-between p-3 rounded-lg border ${score >= 6 ? "bg-red-50 border-red-200" : "bg-yellow-50 border-yellow-200"}`}>
-                        <div>
-                          <p className="text-sm font-bold text-gray-800">{risk.name}</p>
-                          <p className="text-xs text-gray-500">Asset: {risk.asset}</p>
-                        </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${score >= 6 ? "bg-red-600 text-white" : "bg-yellow-500 text-white"}`}>
-                          Score: {score}
-                        </span>
-                      </div>
-                    );
-                  })
-              )}
-            </div>
-          </div>
-
-          {/* 4 Kotak Statistik: Total, High, Medium, Low */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Total Risks</p>
-              <p className="text-2xl font-black text-gray-900">{stats.total}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">High Risks</p>
-              <p className="text-2xl font-black text-red-600">{stats.high}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Medium Risks</p>
-              <p className="text-2xl font-black text-yellow-600">{stats.medium}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg text-center border shadow-sm">
-              <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter">Low Risks</p>
-              <p className="text-2xl font-black text-green-600">{stats.low}</p>
-            </div>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
