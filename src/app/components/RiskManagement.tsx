@@ -65,9 +65,6 @@ export function RiskManagement() {
     localStorage.setItem(CAT_KEY, JSON.stringify(categories));
   }, [categories]);
 
-  const filteredVulns = availableVulns.filter(v => v.asset === formData.asset);
-  const filteredThreats = availableThreats.filter(t => t.vulnerability === formData.vulnerability);
-
   const persistData = (newData: any[]) => {
     setRisks(newData);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
@@ -79,8 +76,30 @@ export function RiskManagement() {
     return "High";
   };
 
+  const handleThreatChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedThreatName = e.target.value;
+    const threatData = availableThreats.find(t => t.name === selectedThreatName);
+
+    let autoVuln = "";
+    let autoAsset = "";
+
+    if (threatData) {
+      autoVuln = threatData.vulnerability;
+      const vulnData = availableVulns.find(v => v.description === autoVuln);
+      if (vulnData) {
+        autoAsset = vulnData.asset;
+      }
+    }
+
+    setFormData({
+      ...formData,
+      threat: selectedThreatName,
+      vulnerability: autoVuln,
+      asset: autoAsset
+    });
+  };
+
   const handleSave = () => {
-    // Validasi Kelengkapan Data
     if (!formData.name || !formData.asset || !formData.vulnerability || !formData.threat || !formData.category) {
       alert("Harap melengkapi semua data (Name, Category, Asset, Vulnerability, Threat) terlebih dahulu sebelum menyimpan assessment.");
       return;
@@ -123,7 +142,6 @@ export function RiskManagement() {
   };
 
   const handleDelete = (id: string) => {
-    // Konfirmasi Penghapusan
     if (window.confirm("Apakah Anda ingin menghapus risiko ini?")) {
       persistData(risks.filter((r) => r.id !== id));
     }
@@ -140,13 +158,14 @@ export function RiskManagement() {
     });
   };
 
-const filteredRisks = risks.filter((r) => {
-  const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        r.id.toLowerCase().includes(searchTerm.toLowerCase());
-  const matchesLevel = levelFilter === "" || r.level === levelFilter;
-  
-  return matchesSearch && matchesLevel;
-});
+  const filteredRisks = risks.filter((r) => {
+    const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          r.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLevel = levelFilter === "" || r.level === levelFilter;
+    
+    return matchesSearch && matchesLevel;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
@@ -159,33 +178,32 @@ const filteredRisks = risks.filter((r) => {
         </Button>
       </div>
 
-<Card className="p-4 bg-white border border-gray-200 shadow-sm">
-  <div className="flex flex-col md:flex-row gap-4">
-    {/* Input Pencarian */}
-    <div className="relative flex-1 group">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search risks..."
-        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
-      />
-    </div>
+      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search risks..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all"
+            />
+          </div>
 
-    {/* Filter Risk Level */}
-    <select 
-      value={levelFilter}
-      onChange={(e) => setLevelFilter(e.target.value)}
-      className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
-    >
-      <option value="">All Levels</option>
-      <option value="High">High</option>
-      <option value="Medium">Medium</option>
-      <option value="Low">Low</option>
-    </select>
-  </div>
-</Card>
+          <select 
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500/10 focus:border-[#EB1D29] outline-none transition-all cursor-pointer text-sm font-medium text-gray-700"
+          >
+            <option value="">All Levels</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </Card>
+
       <Card className="overflow-x-auto border-none shadow-sm bg-white">
         <Table className="min-w-max">
           <TableHeader className="bg-gray-50/50">
@@ -206,6 +224,7 @@ const filteredRisks = risks.filter((r) => {
             {filteredRisks.length > 0 ? (
               filteredRisks.map((risk) => {
                 const assetData = availableAssets.find(a => a.name === risk.asset);
+                const threatData = availableThreats.find(t => t.name === risk.threat);
                 const assetValue = assetData?.value || 0;
                 const assetQty = assetData?.quantity || 1;
                 const calculatedRisk = (assetValue * assetQty) * risk.likelihood * risk.impact;
@@ -218,9 +237,12 @@ const filteredRisks = risks.filter((r) => {
                     <TableCell className="text-gray-600 text-sm max-w-[200px] truncate" title={risk.vulnerability}>
                       {risk.vulnerability}
                     </TableCell>
-                    <TableCell className="text-gray-600 text-sm">{risk.threat}</TableCell>
+                    <TableCell className="text-gray-600 text-sm">
+                      {threatData ? `${threatData.id} - ${risk.threat}` : risk.threat}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200 bg-gray-50">                        {risk.category}
+                      <Badge variant="outline" className="font-semibold text-gray-500 border-gray-200 bg-gray-50">
+                        {risk.category}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
@@ -230,26 +252,21 @@ const filteredRisks = risks.filter((r) => {
                     <TableCell className="font-bold text-[#EB1D29] whitespace-nowrap">
                       Rp {calculatedRisk.toLocaleString("id-ID")}
                     </TableCell>
-                  <TableCell>
-                    <Badge 
-                      className={`${
-                        risk.level === "High" 
-                          ? "bg-red-50 text-red-700 border-red-100" 
-                          : risk.level === "Medium" 
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-100" 
-                            : "bg-green-50 text-green-700 border-green-100"
-                      } cursor-help`}
-                      title={
-                        risk.level === "High" 
-                          ? "Skor 5-9" 
-                          : risk.level === "Medium" 
-                            ? "Skor 3-4" 
-                            : "Skor 1-2"
-                      }
-                    >
-                      {risk.level}
-                    </Badge>
-                  </TableCell>                    <TableCell>
+                    <TableCell>
+                      <Badge 
+                        className={`${
+                          risk.level === "High" 
+                            ? "bg-red-50 text-red-700 border-red-100" 
+                            : risk.level === "Medium" 
+                              ? "bg-yellow-50 text-yellow-700 border-yellow-100" 
+                              : "bg-green-50 text-green-700 border-green-100"
+                        } cursor-help`}
+                        title={risk.level === "High" ? "Skor 5-9" : risk.level === "Medium" ? "Skor 3-4" : "Skor 1-2"}
+                      >
+                        {risk.level}
+                      </Badge>
+                    </TableCell>                    
+                    <TableCell>
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setEditingId(risk.id); setFormData(risk); setShowAddModal(true); }}><Edit className="w-4 h-4 text-[#EB1D29]" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(risk.id)}><Trash2 className="w-4 h-4 text-red-600" /></Button>
@@ -288,7 +305,7 @@ const filteredRisks = risks.filter((r) => {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 block mb-1">Risk Category</label>
-                  <select value={formData.category} onChange={(e) => { setFormData({...formData, category: e.target.value}); setIsCustom(e.target.value === "Other"); }} className="w-full px-4 py-2 border rounded-lg outline-none bg-white">
+                  <select value={formData.category} onChange={(e) => { setFormData({...formData, category: e.target.value}); setIsCustom(e.target.value === "Other"); }} className="w-full px-4 py-2 border rounded-lg outline-none bg-white focus:border-[#EB1D29]">
                     <option value="">Select Category</option>
                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     <option value="Other" className="font-bold text-red-600">+ Add New Category</option>
@@ -303,27 +320,37 @@ const filteredRisks = risks.filter((r) => {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">Related Asset</label>
-                  <select value={formData.asset} onChange={(e) => setFormData({...formData, asset: e.target.value, vulnerability: "", threat: ""})} className="w-full px-3 py-2 border rounded-lg outline-none bg-white">
-                    <option value="">Select Asset</option>
-                    {availableAssets.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">Related Vulnerability</label>
-                  <select disabled={!formData.asset} value={formData.vulnerability} onChange={(e) => setFormData({...formData, vulnerability: e.target.value, threat: ""})} className="w-full px-3 py-2 border rounded-lg outline-none bg-white disabled:bg-gray-50">
-                    <option value="">{formData.asset ? "Select Vulnerability" : "Select Asset First"}</option>
-                    {filteredVulns.map(v => <option key={v.id} value={v.description}>{v.description.substring(0, 30)}...</option>)}
-                  </select>
-                </div>
+              <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold text-gray-500 block mb-1">Related Threat</label>
-                  <select disabled={!formData.vulnerability} value={formData.threat} onChange={(e) => setFormData({...formData, threat: e.target.value})} className="w-full px-3 py-2 border rounded-lg outline-none bg-white disabled:bg-gray-50">
-                    <option value="">{formData.vulnerability ? "Select Threat" : "Select Vuln First"}</option>
-                    {filteredThreats.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                  <select 
+                    value={formData.threat} 
+                    onChange={handleThreatChange} 
+                    className="w-full px-3 py-2 border rounded-lg outline-none bg-white focus:border-[#EB1D29]"
+                  >
+                    <option value="">Select Threat</option>
+                    {/* Penambahan informasi ID di samping nama Threat */}
+                    {availableThreats.map(t => (
+                      <option key={t.id} value={t.name}>
+                        {t.id} - {t.name}
+                      </option>
+                    ))}
                   </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Related Asset</label>
+                    <div className="w-full px-3 py-2 border border-gray-100 rounded-lg bg-gray-50 text-gray-500 text-sm min-h-[42px] flex items-center">
+                      {formData.asset || <span className="italic text-gray-400">Auto-filled based on Threat</span>}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Related Vulnerability</label>
+                    <div className="w-full px-3 py-2 border border-gray-100 rounded-lg bg-gray-50 text-gray-500 text-sm min-h-[42px] flex items-center truncate" title={formData.vulnerability}>
+                      {formData.vulnerability || <span className="italic text-gray-400">Auto-filled based on Threat</span>}
+                    </div>
+                  </div>
                 </div>
               </div>
 
