@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Search, X } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-// Tambahkan import Badge jika tersedia di folder ui Anda
 import { Badge } from "./ui/badge"; 
 import {
   Table,
@@ -14,7 +13,6 @@ import {
 } from "./ui/table";
 
 export function AssetManagement() {
-  // --- LOGIKA TETAP SAMA ---
   const [assets, setAssets] = useState<any[]>(() => {
     const savedAssets = localStorage.getItem("richeese_assets");
     return savedAssets ? JSON.parse(savedAssets) : [];
@@ -89,9 +87,12 @@ export function AssetManagement() {
     } else {
       let nextNumber = 1;
       if (assets.length > 0) {
-        const lastAsset = assets[assets.length - 1];
-        const lastIdParts = lastAsset.id.split("-");
-        nextNumber = lastIdParts.length > 1 ? parseInt(lastIdParts[1]) + 1 : assets.length + 1;
+        // Logika pencarian ID numerik tertinggi untuk mencegah duplikasi ID
+        const currentIds = assets.map(a => {
+          const parts = a.id.split("-");
+          return parts.length > 1 ? parseInt(parts[1]) : 0;
+        });
+        nextNumber = Math.max(...currentIds, 0) + 1;
       }
       const nextId = `A-${nextNumber.toString().padStart(3, "0")}`;
       const assetToAdd = { id: nextId, ...assetData, status: "Active" };
@@ -109,7 +110,7 @@ export function AssetManagement() {
   };
 
   const handleDeleteAsset = (id: string) => {
-    if (window.confirm("Hapus aset ini?")) {
+    if (window.confirm("Hapus aset ini? Kerentanan terkait mungkin kehilangan referensi.")) {
       setAssets(assets.filter((a: any) => a.id !== id));
     }
   };
@@ -121,7 +122,6 @@ export function AssetManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Section - Meniru VulnerabilityManagement */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Asset Management</h1>
@@ -135,7 +135,6 @@ export function AssetManagement() {
         </Button>
       </div>
 
-      {/* 2. Search Bar - Desain yang lebih bersih dan modern */}
       <Card className="p-4 bg-white border border-gray-200 shadow-sm">
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#EB1D29] transition-colors" />
@@ -149,7 +148,6 @@ export function AssetManagement() {
         </div>
       </Card>
 
-      {/* 3. Table Section - Mengikuti style VulnerabilityManagement */}
       <Card className="overflow-hidden border-none shadow-sm">
         <Table>
           <TableHeader className="bg-gray-50">
@@ -163,60 +161,55 @@ export function AssetManagement() {
               <TableHead className="font-bold text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
-<TableBody>
-  {filteredAssets.length > 0 ? (
-    filteredAssets.map((asset) => (
-      <TableRow key={asset.id} className="hover:bg-gray-50/50 transition-colors">
-        <TableCell className="font-bold text-[#EB1D29]">{asset.id}</TableCell>
-        <TableCell className="font-medium text-gray-900">{asset.name}</TableCell>
-        
-        {/* Category: Menggunakan gaya Badge standar gray seperti Related Asset */}
-        <TableCell>
-          <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100 shadow-none border-none">
-            {asset.category}
-          </Badge>
-        </TableCell>
-
-        {/* Type: Menggunakan logika warna dinamis seperti Severity */}
-        <TableCell>
-          <Badge 
-            className={
-              asset.type === "Tangible" 
-                ? "bg-red-100 text-red-700 shadow-none border-none" 
-                : "bg-purple-100 text-purple-700 shadow-none border-none"
-            }
-          >
-            {asset.type}
-          </Badge>
-        </TableCell>
-
-        <TableCell className="text-center font-medium">{asset.quantity}</TableCell>
-        <TableCell className="font-bold text-[#EB1D29]">
-          Rp {((asset.quantity || 1) * (asset.value || 0)).toLocaleString("id-ID")}
-        </TableCell>
-        <TableCell>
-          <div className="flex justify-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => handleEditClick(asset)} className="h-8 w-8 p-0">
-              <Edit className="w-4 h-4 text-red-600" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)} className="h-8 w-8 p-0">
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    ))
-  ) : (
-    <TableRow>
-      <TableCell colSpan={7} className="text-center py-10 text-gray-400">
-        No data found.
-      </TableCell>
-    </TableRow>
-  )}
-</TableBody>        </Table>
+          <TableBody>
+            {filteredAssets.length > 0 ? (
+              filteredAssets.map((asset) => (
+                <TableRow key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+                  <TableCell className="font-bold text-[#EB1D29]">{asset.id}</TableCell>
+                  <TableCell className="font-medium text-gray-900">{asset.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100 shadow-none border-none">
+                      {asset.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={
+                        asset.type === "Tangible" 
+                          ? "bg-red-100 text-red-700 shadow-none border-none" 
+                          : "bg-purple-100 text-purple-700 shadow-none border-none"
+                      }
+                    >
+                      {asset.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-medium">{asset.quantity}</TableCell>
+                  <TableCell className="font-bold text-[#EB1D29]">
+                    Rp {((asset.quantity || 1) * (asset.value || 0)).toLocaleString("id-ID")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(asset)} className="h-8 w-8 p-0">
+                        <Edit className="w-4 h-4 text-red-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)} className="h-8 w-8 p-0">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-10 text-gray-400">
+                  No data found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
-      {/* Modal Section - Tetap Menggunakan UI Yang Sudah Ada (Sudah Bagus) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md p-6 shadow-2xl">
