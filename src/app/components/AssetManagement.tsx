@@ -40,6 +40,7 @@ export function AssetManagement() {
 
   useEffect(() => {
     localStorage.setItem("richeese_assets", JSON.stringify(assets));
+    window.dispatchEvent(new Event("richeese:data-updated"));
   }, [assets]);
 
   useEffect(() => {

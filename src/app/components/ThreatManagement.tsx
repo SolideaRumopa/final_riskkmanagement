@@ -42,12 +42,21 @@ export function ThreatManagement() {
   });
 
   useEffect(() => {
-    const savedThreats = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (savedThreats) setThreats(JSON.parse(savedThreats));
+    const loadData = () => {
+      const savedThreats = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedThreats) setThreats(JSON.parse(savedThreats));
+      const savedVulns = localStorage.getItem(VULN_STORAGE_KEY);
+      if (savedVulns) setVulnerabilities(JSON.parse(savedVulns));
+    };
 
-    const savedVulns = localStorage.getItem(VULN_STORAGE_KEY);
-    if (savedVulns) setVulnerabilities(JSON.parse(savedVulns));
-  }, [showAddModal]);
+    loadData();
+    window.addEventListener("richeese:data-updated", loadData);
+    window.addEventListener("storage", loadData);
+    return () => {
+      window.removeEventListener("richeese:data-updated", loadData);
+      window.removeEventListener("storage", loadData);
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(CAT_STORAGE_KEY, JSON.stringify(categories));
@@ -97,6 +106,7 @@ export function ThreatManagement() {
 
     setThreats(updatedThreats);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedThreats));
+    window.dispatchEvent(new Event("richeese:data-updated"));
     closeModal();
   };
 
@@ -105,6 +115,7 @@ export function ThreatManagement() {
       const updated = threats.filter((t) => t.id !== id);
       setThreats(updated);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new Event("richeese:data-updated"));
     }
   };
 

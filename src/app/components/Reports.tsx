@@ -38,15 +38,12 @@ export function Reports() {
         setRisks(parsedRisks);
         setStats({
           total: parsedRisks.length,
-          high: parsedRisks.filter((r: any) => r.likelihood * r.impact >= 6)
-            .length,
-          medium: parsedRisks.filter((r: any) => {
-            const score = r.likelihood * r.impact;
-            return score >= 3 && score < 6;
-          }).length,
-          low: parsedRisks.filter((r: any) => r.likelihood * r.impact < 3)
-            .length,
+          high: parsedRisks.filter((r: any) => r.level === "High").length,
+          medium: parsedRisks.filter((r: any) => r.level === "Medium").length,
+          low: parsedRisks.filter((r: any) => r.level === "Low").length,
         });
+      } else {
+        setStats({ total: 0, high: 0, medium: 0, low: 0 });
       }
 
       if (savedAssets) setAssets(JSON.parse(savedAssets));
@@ -56,8 +53,12 @@ export function Reports() {
     };
 
     loadData();
+    window.addEventListener("richeese:data-updated", loadData);
     window.addEventListener("storage", loadData);
-    return () => window.removeEventListener("storage", loadData);
+    return () => {
+      window.removeEventListener("richeese:data-updated", loadData);
+      window.removeEventListener("storage", loadData);
+    };
   }, []);
 
   const scoreLookup: Record<string, number> = {
@@ -65,6 +66,9 @@ export function Reports() {
     Low: 1,
     Medium: 2,
     High: 3,
+    Pending: 1,
+    "In Progress": 2,
+    Completed: 3,
   };
 
   const getScore = (value: string | number) => {
@@ -72,45 +76,93 @@ export function Reports() {
     return scoreLookup[value] ?? 0;
   };
 
+  const getAssetById = (id: string) => assets.find((a) => a.id === id);
+  const getRiskById = (id: string) => risks.find((r) => r.id === id);
+  const getThreatById = (id: string) => threats.find((t) => t.id === id);
+  const getVulnerabilityById = (id: string) => vulnerabilities.find((v) => v.id === id);
+
   const getAssetTotalValue = (asset: any) => {
     const qty = Number(asset.quantity || 1);
     const val = Number(asset.value || 0);
     return qty * val;
   };
 
+  const getAssetNames = (ids: string[]) => {
+    return (ids || [])
+      .map((id) => getAssetById(id))
+      .filter(Boolean)
+      .map((asset) => asset.name)
+      .join(", ");
+  };
+
+  const getVulnerabilityNames = (ids: string[]) => {
+    return (ids || [])
+      .map((id) => getVulnerabilityById(id))
+      .filter(Boolean)
+      .map((vuln) => vuln.description)
+      .join(", ");
+  };
+
+  const getRiskNames = (ids: string[]) => {
+    return (ids || [])
+      .map((id) => getRiskById(id))
+      .filter(Boolean)
+      .map((risk) => risk.name)
+      .join(", ");
+  };
+
+  const getAssetNameForRisk = (risk: any) => {
+    return getAssetById(risk.assetId)?.name || "Unlinked Asset";
+  };
+
+  const getRiskThreatNames = (risk: any) => {
+    return (risk.threatIds || [])
+      .map((id) => getThreatById(id))
+      .filter(Boolean)
+      .map((threat) => threat.name)
+      .join(", ");
+  };
+
   const getVulnerabilityImpact = (vuln: any) => {
-    const asset = assets.find(
-      (a) => a.name === vuln.asset || a.id === vuln.asset,
-    );
-    return asset ? getAssetTotalValue(asset) * getScore(vuln.severity) : 0;
+    const assetValues = (vuln.assetIds || [])
+      .map((id: string) => getAssetById(id))
+      .filter(Boolean)
+      .map((asset) => getAssetTotalValue(asset));
+    const assetTotal = assetValues.reduce((sum, value) => sum + value, 0);
+    return assetTotal * getScore(vuln.severity);
   };
 
   const getThreatImpact = (threat: any) => {
-    const vuln = vulnerabilities.find(
-      (v) => v.description === threat.vulnerability,
-    );
-    return vuln
-      ? getVulnerabilityImpact(vuln) * getScore(threat.probability)
-      : 0;
+    const vulnValues = (threat.vulnerabilityIds || [])
+      .map((id: string) => getVulnerabilityById(id))
+      .filter(Boolean)
+      .map((vuln) => getVulnerabilityImpact(vuln));
+    const vulnTotal = vulnValues.reduce((sum, value) => sum + value, 0);
+    return vulnTotal * getScore(threat.probability);
   };
 
-  const getThreatNameForControl = (control: any) => {
-    const matchedRisk = risks.find((r) => r.name === control.relatedRisk);
-    if (matchedRisk && matchedRisk.threat) return matchedRisk.threat;
-    return control.relatedRisk;
+  const getControlRiskNames = (control: any) => {
+    return (control.riskIds || [])
+      .map((id: string) => getRiskById(id))
+      .filter(Boolean)
+      .map((risk) => risk.name)
+      .join(", ");
   };
 
   const getControlImpact = (control: any) => {
-    const threatName = getThreatNameForControl(control);
-    const threat = threats.find((t) => t.name === threatName);
-    return threat ? getThreatImpact(threat) * getScore(control.priority) : 0;
+    const linkedRisks = (control.riskIds || [])
+      .map((id: string) => getRiskById(id))
+      .filter(Boolean);
+
+    const priorityFactor = getScore(control.priority) || 1;
+    return linkedRisks.reduce((sum, risk) => {
+      const riskScore = risk.score || Number(risk.likelihood || 0) * Number(risk.impact || 0);
+      return sum + riskScore * priorityFactor;
+    }, 0);
   };
 
-  const threatNameMap = new Map<string, any>(threats.map((t) => [t.name, t]));
-
-  const getControlMatch = (control: any, threatName: string) => {
-    const mappedThreatName = getThreatNameForControl(control);
-    return mappedThreatName === threatName;
+  const getMitigatingControls = (riskId: string) => {
+    return controls.filter((control) => (control.riskIds || []).includes(riskId));
   };
 
   const handleExportPDF = () => {
@@ -128,7 +180,13 @@ export function Reports() {
       localStorage.getItem(RISK_STORAGE_KEY) || "[]",
     );
 
-    if (assets.length === 0 && risksData.length === 0 && vulns.length === 0) {
+    if (
+      assets.length === 0 &&
+      risksData.length === 0 &&
+      vulns.length === 0 &&
+      threats.length === 0 &&
+      controls.length === 0
+    ) {
       return alert("Tidak ada data untuk diekspor.");
     }
 
@@ -199,19 +257,60 @@ export function Reports() {
 
     generateSection(
       "2. VULNERABILITIES",
-      [["ID", "Description", "Related Asset", "Severity"]],
-      vulns.map((v: any) => [v.id || "-", v.description, v.asset, v.severity]),
+      [["ID", "Description", "Related Assets", "Severity", "Status"]],
+      vulns.map((v: any) => [
+        v.id || "-",
+        v.description,
+        Array.isArray(v.assetIds) ? getAssetNames(v.assetIds) : "",
+        v.severity,
+        v.status || "",
+      ]),
     );
 
     generateSection(
       "3. THREATS",
-      [["ID", "Name", "Related Vulnerability", "Category", "Probability"]],
+      [["ID", "Name", "Related Vulnerabilities", "Category", "Probability"]],
       threats.map((t: any) => [
         t.id || "-",
         t.name,
-        t.vulnerability,
+        Array.isArray(t.vulnerabilityIds) ? getVulnerabilityNames(t.vulnerabilityIds) : "",
         t.category,
         t.probability,
+      ]),
+    );
+
+    generateSection(
+      "4. CONTROLS",
+      [["ID", "Name", "Type", "Related Risks", "Priority", "Status"]],
+      controls.map((c: any) => [
+        c.id || "-",
+        c.name,
+        c.type,
+        Array.isArray(c.riskIds) ? getRiskNames(c.riskIds) : "",
+        c.priority,
+        c.status,
+      ]),
+    );
+
+    generateSection(
+      "5. RISKS",
+      [[
+        "ID",
+        "Name",
+        "Asset",
+        "Threats",
+        "Score",
+        "Level",
+        "Treatment",
+      ]],
+      risksData.map((r: any) => [
+        r.id || "-",
+        r.name,
+        getAssetById(r.assetId)?.name || "Unlinked Asset",
+        Array.isArray(r.threatIds) ? r.threatIds.map((id: string) => getThreatById(id)?.name || id).join(", ") : "",
+        r.score || Number(r.likelihood || 0) * Number(r.impact || 0),
+        r.level || "",
+        r.treatment || "",
       ]),
     );
 
@@ -240,7 +339,7 @@ export function Reports() {
       </div>
 
       {/* Stats Summary Footer */}
-      <div className="grid grid-cols-4 gap-4 mt-6">
+      <div className="grid grid-cols-5 gap-4 mt-6">
         <div className="p-4 bg-gray-100 rounded-xl text-center border">
           <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">
             Total Assets
@@ -249,7 +348,7 @@ export function Reports() {
         </div>
         <div className="p-4 bg-gray-100 rounded-xl text-center border">
           <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">
-            Total Vulns
+            Total Vulnerabilities
           </p>
           <p className="text-2xl font-black text-gray-900">
             {vulnerabilities.length}
@@ -266,6 +365,12 @@ export function Reports() {
             Total Controls
           </p>
           <p className="text-2xl font-black text-gray-900">{controls.length}</p>
+        </div>
+        <div className="p-4 bg-gray-100 rounded-xl text-center border">
+          <p className="text-[10px] text-gray-500 font-bold mb-1 tracking-tighter uppercase">
+            Total Risks
+          </p>
+          <p className="text-2xl font-black text-gray-900">{risks.length}</p>
         </div>
       </div>
 
@@ -323,8 +428,7 @@ export function Reports() {
                         </td>
                         {assets.map((asset) => {
                           const relatedVuln = relatedVulns.find(
-                            (v) =>
-                              v.asset === asset.name || v.asset === asset.id,
+                            (v) => Array.isArray(v.assetIds) && v.assetIds.includes(asset.id),
                           );
                           const score = relatedVuln
                             ? getScore(relatedVuln.severity)
@@ -399,7 +503,7 @@ export function Reports() {
                       </td>
                       {vulnerabilities.map((vuln) => {
                         const score =
-                          threat.vulnerability === vuln.description
+                          Array.isArray(threat.vulnerabilityIds) && threat.vulnerabilityIds.includes(vuln.id)
                             ? getScore(threat.probability)
                             : 0;
                         return (
@@ -431,12 +535,12 @@ export function Reports() {
           </div>
         </Card>
 
-        {/* 3. Threat / Control Matrix */}
+        {/* 3. Risk / Control Matrix */}
         <Card className="p-6 border-none shadow-xl bg-white rounded-2xl">
           <div className="flex items-center gap-2 mb-4 border-b pb-2">
             <Zap className="w-5 h-5 text-green-600" />
             <h3 className="font-black text-sm text-gray-800 uppercase">
-              Threat / Control Matrix
+              Risk / Control Matrix
             </h3>
           </div>
           <div className="overflow-x-auto max-h-[420px]">
@@ -444,14 +548,14 @@ export function Reports() {
               <thead>
                 <tr className="border-b bg-gray-50">
                   <th className="p-2 text-[10px] font-black text-gray-500 uppercase">
-                    Threat / Control
+                    Control / Risk
                   </th>
-                  {threats.map((threat) => (
+                  {risks.map((risk) => (
                     <th
-                      key={threat.id}
+                      key={risk.id}
                       className="p-2 text-[10px] font-black text-gray-500 uppercase"
                     >
-                      {threat.name}
+                      {risk.name}
                     </th>
                   ))}
                   <th className="p-2 text-[10px] font-black text-gray-500 uppercase">
@@ -467,20 +571,18 @@ export function Reports() {
                       className="border-b hover:bg-gray-50 transition-colors"
                     >
                       <td className="p-2 font-bold text-gray-700 align-top">
-                        <div className="leading-tight">
-                          {getThreatNameForControl(control)}
-                        </div>
+                        <div className="leading-tight">{control.name}</div>
                         <div className="text-[10px] font-medium text-gray-500 leading-tight mt-1">
-                          {control.name}
+                          {getControlRiskNames(control) || "No linked risks"}
                         </div>
                       </td>
-                      {threats.map((threat) => {
-                        const score = getControlMatch(control, threat.name)
+                      {risks.map((risk) => {
+                        const score = (control.riskIds || []).includes(risk.id)
                           ? getScore(control.priority)
                           : 0;
                         return (
                           <td
-                            key={`${control.id}-${threat.id}`}
+                            key={`${control.id}-${risk.id}`}
                             className="p-2 font-semibold text-center text-gray-700"
                           >
                             {score}
@@ -495,7 +597,7 @@ export function Reports() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={threats.length + 2}
+                      colSpan={risks.length + 2}
                       className="p-4 text-center text-gray-400 italic"
                     >
                       No controls found

@@ -54,8 +54,15 @@ export function RiskManagement() {
       if (v) setAvailableVulns(JSON.parse(v));
       if (c) setAvailableControls(JSON.parse(c));
     };
+
     loadData();
-  }, [showModal]);
+    window.addEventListener("richeese:data-updated", loadData);
+    window.addEventListener("storage", loadData);
+    return () => {
+      window.removeEventListener("richeese:data-updated", loadData);
+      window.removeEventListener("storage", loadData);
+    };
+  }, []);
 
   // Mendapatkan assetId berdasarkan threat yang dipilih secara otomatis
   const autoResolveAssetId = (threatIds: string[]) => {
@@ -99,6 +106,7 @@ export function RiskManagement() {
 
     setRisks(updatedRisks);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRisks));
+    window.dispatchEvent(new Event("richeese:data-updated"));
     closeModal();
   };
 
@@ -113,6 +121,7 @@ export function RiskManagement() {
       const filtered = risks.filter((r) => r.id !== id);
       setRisks(filtered);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+      window.dispatchEvent(new Event("richeese:data-updated"));
     }
   };
 

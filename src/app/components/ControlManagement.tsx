@@ -34,12 +34,21 @@ export function ControlManagement() {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setControls(JSON.parse(saved));
+    const loadData = () => {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setControls(JSON.parse(saved));
+      const savedRisks = localStorage.getItem(RISK_STORAGE_KEY);
+      if (savedRisks) setAvailableRisks(JSON.parse(savedRisks));
+    };
 
-    const savedRisks = localStorage.getItem(RISK_STORAGE_KEY);
-    if (savedRisks) setAvailableRisks(JSON.parse(savedRisks));
-  }, [showAddModal]);
+    loadData();
+    window.addEventListener("richeese:data-updated", loadData);
+    window.addEventListener("storage", loadData);
+    return () => {
+      window.removeEventListener("richeese:data-updated", loadData);
+      window.removeEventListener("storage", loadData);
+    };
+  }, []);
 
   const handleSave = () => {
     if (!formData.name || !formData.type || formData.riskIds.length === 0) {
@@ -67,6 +76,7 @@ export function ControlManagement() {
 
     setControls(updatedControls);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedControls));
+    window.dispatchEvent(new Event("richeese:data-updated"));
     handleCloseModal();
   };
 
@@ -75,6 +85,7 @@ export function ControlManagement() {
       const filtered = controls.filter((c) => c.id !== id);
       setControls(filtered);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+      window.dispatchEvent(new Event("richeese:data-updated"));
     }
   };
 
